@@ -3,36 +3,56 @@ name: Build Windows Executable
 on:
   workflow_dispatch:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "master" ]
 
 jobs:
   build-windows:
     name: Build Remote Coop Play for Windows
-    runs-on: windows-latest
+    runs-on: windows-2022
 
     steps:
       - name: Checkout project
         uses: actions/checkout@v4
 
+      - name: Find app folder
+        id: find_app
+        shell: pwsh
+        run: |
+          if (Test-Path "app/package.json") {
+            echo "APP_DIR=app" >> $env:GITHUB_ENV
+          }
+          elseif (Test-Path "remote-coop-play/app/package.json") {
+            echo "APP_DIR=remote-coop-play/app" >> $env:GITHUB_ENV
+          }
+          else {
+            Write-Host "Repository files:"
+            Get-ChildItem -Recurse -Depth 3 | Select-Object FullName
+            throw "Could not find app/package.json. Your project files are not uploaded correctly."
+          }
+
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
 
       - name: Install app dependencies
-        working-directory: app
-        run: npm install
+        shell: pwsh
+        run: |
+          cd "$env:APP_DIR"
+          npm install
 
       - name: Build Windows executable
-        working-directory: app
-        run: npm run dist:win
+        shell: pwsh
+        run: |
+          cd "$env:APP_DIR"
+          npm run dist:win
 
       - name: Upload client-ready executables
         uses: actions/upload-artifact@v4
         with:
           name: Remote-Coop-Play-Windows
           path: |
-            app/dist/*.exe
-            app/dist/*.blockmap
-            app/dist/latest.yml
+            ${{ env.APP_DIR }}/dist/*.exe
+            ${{ env.APP_DIR }}/dist/*.blockmap
+            ${{ env.APP_DIR }}/dist/latest.yml
           if-no-files-found: error
