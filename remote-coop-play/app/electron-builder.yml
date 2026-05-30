@@ -6,6 +6,9 @@ files:
   - src/**/*
   - assets/**/*
   - package.json
+asar: true
+asarUnpack:
+  - src/native/**
 win:
   target:
     - portable

@@ -541,12 +541,13 @@ async function joinRoom() {
 function lockGuestInput() {
   if (!state.dc || state.dc.readyState !== "open") {
     ui.guestInputLock.checked = false;
-    showToast("Input channel is not ready yet.");
+    showToast("Input channel is not ready yet. Wait until you see Input channel ready.");
     return;
   }
 
   ui.remoteStage.focus();
   ui.inputOverlay.classList.remove("hidden");
+  showToast("Controls locked. Press Escape to unlock.");
 }
 
 function unlockGuestInput() {
@@ -765,10 +766,14 @@ function bindEvents() {
   ui.remoteInputToggle.addEventListener("change", async () => {
     const enabled = ui.remoteInputToggle.checked;
     const status = await window.remoteCoop.setInputEnabled(enabled);
+
     if (enabled && status.helperError) {
-      showToast(status.helperError, 5500);
+      ui.remoteInputToggle.checked = false;
+      showToast(`Remote input failed: ${status.helperError}`, 8000);
+    } else if (enabled) {
+      showToast(status.helperReady ? "Remote input enabled. Keyboard helper ready." : "Remote input enabled. Helper is starting...");
     } else {
-      showToast(enabled ? "Remote input enabled." : "Remote input disabled.");
+      showToast("Remote input disabled.");
     }
   });
 
@@ -798,6 +803,8 @@ function bindEvents() {
 
   ui.remoteStage.addEventListener("keydown", onGuestKeyDown);
   ui.remoteStage.addEventListener("keyup", onGuestKeyUp);
+  window.addEventListener("keydown", onGuestKeyDown);
+  window.addEventListener("keyup", onGuestKeyUp);
   window.addEventListener("blur", () => {
     releaseGuestPressedKeys();
     window.remoteCoop.releaseAllKeys();

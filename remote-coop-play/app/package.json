@@ -34,6 +34,10 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true
-    }
+    },
+    "asar": true,
+    "asarUnpack": [
+      "src/native/**"
+    ]
   }
 }

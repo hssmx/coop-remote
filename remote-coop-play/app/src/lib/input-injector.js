@@ -1,6 +1,32 @@
 const path = require("path");
+const fs = require("fs");
 const { spawn } = require("child_process");
+const { app } = require("electron");
 const { normalizeInput, ALLOWED_CODES } = require("./key-policy");
+
+function resolveKeyboardHelperPath() {
+  const candidates = [];
+
+  if (app && app.isPackaged) {
+    candidates.push(
+      path.join(process.resourcesPath, "app.asar.unpacked", "src", "native", "windows-key-helper.ps1"),
+      path.join(process.resourcesPath, "src", "native", "windows-key-helper.ps1")
+    );
+  }
+
+  candidates.push(
+    path.join(__dirname, "..", "native", "windows-key-helper.ps1"),
+    path.join(__dirname.replace("app.asar", "app.asar.unpacked"), "..", "native", "windows-key-helper.ps1")
+  );
+
+  for (const candidate of candidates) {
+    try {
+      if (fs.existsSync(candidate)) return candidate;
+    } catch {}
+  }
+
+  return candidates[0];
+}
 
 function createInputInjector() {
   let enabled = false;
@@ -17,7 +43,13 @@ function createInputInjector() {
 
     if (helper && helper.exitCode === null) return true;
 
-    const helperPath = path.join(__dirname, "..", "native", "windows-key-helper.ps1");
+    const helperPath = resolveKeyboardHelperPath();
+
+    if (!fs.existsSync(helperPath)) {
+      helperError = `Keyboard helper not found at: ${helperPath}`;
+      console.error(helperError);
+      return false;
+    }
 
     helperReady = false;
     helperError = null;
@@ -50,6 +82,14 @@ function createInputInjector() {
       console.error("[key-helper-error]", helperError);
     });
 
+    helper.on("error", (error) => {
+      helperError = error.message;
+      console.error("[key-helper-spawn-error]", helperError);
+      helper = null;
+      helperReady = false;
+      pressed.clear();
+    });
+
     helper.on("exit", (code) => {
       helperReady = false;
       if (code !== 0 && code !== null) {
@@ -67,14 +107,20 @@ function createInputInjector() {
       return { ok: false, error: helperError || "Keyboard helper is not available." };
     }
 
-    helper.stdin.write(`${JSON.stringify(payload)}\n`);
-    return { ok: true };
+    try {
+      helper.stdin.write(`${JSON.stringify(payload)}\n`);
+      return { ok: true };
+    } catch (error) {
+      helperError = error.message;
+      return { ok: false, error: helperError };
+    }
   }
 
   function setEnabled(value) {
     enabled = Boolean(value);
     if (enabled) ensureHelper();
     if (!enabled) releaseAll();
+    return status();
   }
 
   function handleRemoteInput(payload) {
@@ -123,7 +169,8 @@ function createInputInjector() {
       helperReady,
       helperError,
       allowedCodes: Array.from(ALLOWED_CODES),
-      pressed: Array.from(pressed)
+      pressed: Array.from(pressed),
+      helperPath: resolveKeyboardHelperPath()
     };
   }
 
