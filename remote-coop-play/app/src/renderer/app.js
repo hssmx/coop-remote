@@ -4,9 +4,18 @@ const ui = {
   roleScreen: $("#roleScreen"),
   hostScreen: $("#hostScreen"),
   guestScreen: $("#guestScreen"),
+  homeNav: $("#homeNav"),
+  hostNav: $("#hostNav"),
+  guestNav: $("#guestNav"),
+  settingsNav: $("#settingsNav"),
+  quickOpenSettings: $("#quickOpenSettings"),
+  settingsModal: $("#settingsModal"),
+  closeSettingsModal: $("#closeSettingsModal"),
   idleStage: $("#idleStage"),
   hostVideoWrap: $("#hostVideoWrap"),
   guestVideoWrap: $("#guestVideoWrap"),
+  hostFullscreen: $("#hostFullscreen"),
+  guestFullscreen: $("#guestFullscreen"),
   chooseHost: $("#chooseHost"),
   chooseGuest: $("#chooseGuest"),
   serverUrl: $("#serverUrl"),
@@ -102,6 +111,23 @@ function safeStringify(data) {
   try { return JSON.stringify(data); } catch { return String(data); }
 }
 
+function setActiveNav(screen) {
+  if (ui.homeNav) ui.homeNav.classList.toggle("active", screen === "role");
+  if (ui.hostNav) ui.hostNav.classList.toggle("active", screen === "host");
+  if (ui.guestNav) ui.guestNav.classList.toggle("active", screen === "guest");
+}
+
+function openSettingsModal() {
+  ui.settingsModal.classList.remove("hidden");
+  if (ui.settingsNav) ui.settingsNav.classList.add("active");
+  log("info", "Opened settings modal");
+}
+
+function closeSettingsModal() {
+  ui.settingsModal.classList.add("hidden");
+  if (ui.settingsNav) ui.settingsNav.classList.remove("active");
+}
+
 function showToast(message, duration = 3600) {
   ui.toast.textContent = message;
   ui.toast.classList.remove("hidden");
@@ -116,6 +142,7 @@ function showScreen(screen) {
   ui.idleStage.classList.toggle("hidden", screen !== "role");
   ui.hostVideoWrap.classList.toggle("hidden", screen !== "host");
   ui.guestVideoWrap.classList.toggle("hidden", screen !== "guest");
+  setActiveNav(screen);
 }
 
 function loadSettings() {
@@ -569,11 +596,52 @@ async function testLocalInput() {
   showToast("Local input test sent W. Open Notepad and repeat if needed.");
 }
 
+
+async function toggleFullscreen(target, label) {
+  try {
+    if (!target) {
+      log("warn", `Fullscreen target missing: ${label}`);
+      return;
+    }
+
+    if (document.fullscreenElement) {
+      await document.exitFullscreen();
+      log("info", `Exited fullscreen: ${label}`);
+      return;
+    }
+
+    await target.requestFullscreen({ navigationUI: "hide" });
+    log("info", `Entered fullscreen: ${label}`);
+  } catch (error) {
+    log("error", `Fullscreen failed: ${label}`, { message: error.message });
+    showToast(`Fullscreen failed: ${error.message}`, 6000);
+  }
+}
+
+document.addEventListener("fullscreenchange", () => {
+  const isFullscreen = Boolean(document.fullscreenElement);
+  if (ui.hostFullscreen) ui.hostFullscreen.textContent = isFullscreen ? "Exit fullscreen" : "Fullscreen";
+  if (ui.guestFullscreen) ui.guestFullscreen.textContent = isFullscreen ? "Exit fullscreen" : "Fullscreen";
+});
+
 function bindEvents() {
   ui.chooseHost.addEventListener("click", () => { state.role = "host"; showScreen("host"); log("info", "Selected host mode"); });
   ui.chooseGuest.addEventListener("click", () => { state.role = "guest"; showScreen("guest"); log("info", "Selected guest mode"); });
+  ui.homeNav.addEventListener("click", goBack);
+  ui.hostNav.addEventListener("click", () => { state.role = "host"; showScreen("host"); log("info", "Opened host screen from navigation"); });
+  ui.guestNav.addEventListener("click", () => { state.role = "guest"; showScreen("guest"); log("info", "Opened guest screen from navigation"); });
+  ui.settingsNav.addEventListener("click", openSettingsModal);
+  ui.quickOpenSettings.addEventListener("click", openSettingsModal);
+  ui.closeSettingsModal.addEventListener("click", closeSettingsModal);
+  ui.settingsModal.addEventListener("click", (event) => { if (event.target === ui.settingsModal) closeSettingsModal(); });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !ui.settingsModal.classList.contains("hidden")) closeSettingsModal();
+  });
   document.querySelectorAll("[data-back]").forEach((btn) => btn.addEventListener("click", goBack));
-  ui.saveSettings.addEventListener("click", saveSettings);
+  ui.saveSettings.addEventListener("click", () => { saveSettings(); closeSettingsModal(); });
+
+  ui.hostFullscreen.addEventListener("click", () => toggleFullscreen(ui.hostVideoWrap, "host preview"));
+  ui.guestFullscreen.addEventListener("click", () => toggleFullscreen(ui.remoteStage, "guest stream"));
   ui.startHost.addEventListener("click", startHost);
   ui.stopHost.addEventListener("click", () => resetHost());
   ui.copyRoom.addEventListener("click", async () => { if (!state.roomCode) return; await navigator.clipboard.writeText(state.roomCode); showToast("Room code copied."); });

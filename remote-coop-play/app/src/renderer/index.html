@@ -2,285 +2,286 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta
-    http-equiv="Content-Security-Policy"
-    content="default-src 'self'; connect-src * ws: wss:; media-src 'self' blob:; img-src 'self' data: blob:; script-src 'self'; style-src 'self' 'unsafe-inline';"
-  />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src * ws: wss:; media-src 'self' blob:; img-src 'self' data: blob:; script-src 'self'; style-src 'self' 'unsafe-inline';" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Remote Coop Play</title>
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
+  <div class="cosmic-bg"></div>
   <div class="app-shell">
-    <header class="topbar">
-      <div class="brand-wrap">
-        <div class="brand-badge">RCP</div>
-        <div class="brand-copy">
+    <aside class="nav-rail">
+      <div class="rail-brand">
+        <div class="brand-orb">RCP</div>
+        <div>
           <h1>Remote Coop Play</h1>
-          <p>Remote local co-op for browser games, emulators, and offline 2-player games.</p>
+          <p>Cosmic remote local co-op</p>
         </div>
       </div>
 
-      <div class="status-grid">
-        <div class="status-card">
-          <span class="status-label">Signaling</span>
+      <nav class="rail-menu">
+        <button id="homeNav" class="rail-btn active"><span>✦</span><div><strong>Home</strong><small>Overview and quick start</small></div></button>
+        <button id="hostNav" class="rail-btn"><span>⬆</span><div><strong>Host</strong><small>Share this PC</small></div></button>
+        <button id="guestNav" class="rail-btn"><span>⬇</span><div><strong>Join</strong><small>Connect to a host</small></div></button>
+        <button id="settingsNav" class="rail-btn"><span>⚙</span><div><strong>Settings</strong><small>Network and relay options</small></div></button>
+      </nav>
+
+      <section class="status-cluster">
+        <div class="mini-status-card">
+          <span>Status</span>
           <strong id="signalStatus">Signaling: disconnected</strong>
         </div>
-        <div class="status-card">
-          <span class="status-label">Connection</span>
+        <div class="mini-status-card">
+          <span>Session</span>
           <strong id="rtcStatus">WebRTC: idle</strong>
         </div>
-        <div class="status-card">
-          <span class="status-label">Latency</span>
+        <div class="mini-status-card">
+          <span>Latency</span>
           <strong id="latencyStatus">Latency: -- ms</strong>
         </div>
-      </div>
-    </header>
+      </section>
 
-    <main class="workspace-layout">
-      <aside class="sidebar-panel">
-        <div id="roleScreen" class="panel-screen">
-          <section class="hero-card">
-            <span class="eyebrow">Quick start</span>
-            <h2>Choose how this PC will be used.</h2>
-            <p>
-              Host runs the actual game and shares the screen. Guest watches the stream and sends allowed keys.
-            </p>
-            <div class="hero-actions">
-              <button id="chooseHost" class="primary-btn full">Host a game</button>
-              <button id="chooseGuest" class="secondary-btn full">Join a game</button>
-            </div>
-          </section>
+      <section class="rail-tip">
+        <span class="eyebrow">Tip</span>
+        <p>Server settings are hidden in Settings so regular users do not break the defaults.</p>
+      </section>
+    </aside>
 
-          <section class="info-card compact-steps">
-            <div class="card-head">
-              <span class="eyebrow">How it works</span>
-              <h3>Before you start</h3>
-            </div>
-            <ol class="step-list">
-              <li>Run the signaling server.</li>
-              <li>Set the same server URL on both PCs.</li>
-              <li>Host creates a room and shares the code.</li>
-              <li>Guest joins and host accepts.</li>
-              <li>Host enables remote input when ready.</li>
-            </ol>
-          </section>
-
-          <section class="settings-card">
-            <div class="card-head">
-              <span class="eyebrow">Network</span>
-              <h3>Connection settings</h3>
-              <p>For local test use ws://localhost:8787 on the same PC as the server, or ws://LOCAL-IP:8787 on the other PC.</p>
-            </div>
-
-            <div class="form-stack">
-              <label>
-                <span>Signaling server</span>
-                <input id="serverUrl" type="text" value="ws://localhost:8787" spellcheck="false" />
-              </label>
-
-              <label>
-                <span>STUN URL</span>
-                <input id="stunUrl" type="text" value="stun:stun.l.google.com:19302" spellcheck="false" />
-              </label>
-
-              <label>
-                <span>TURN URL, optional</span>
-                <input id="turnUrl" type="text" placeholder="turn:your-domain.com:3478" spellcheck="false" />
-              </label>
-
-              <div class="split-fields">
-                <label>
-                  <span>TURN username</span>
-                  <input id="turnUsername" type="text" placeholder="optional" spellcheck="false" />
-                </label>
-                <label>
-                  <span>TURN password</span>
-                  <input id="turnPassword" type="password" placeholder="optional" />
-                </label>
-              </div>
-            </div>
-
-            <button id="saveSettings" class="secondary-btn full">Save settings</button>
-          </section>
+    <main class="main-shell">
+      <section class="glass-header">
+        <div>
+          <span class="eyebrow">Session cockpit</span>
+          <h2>Faster setup, cleaner flow, less user confusion.</h2>
+          <p>Use the left menu to move between Home, Host, Join, and Settings. The big panel shows the live stream or preview.</p>
         </div>
+        <button id="quickOpenSettings" class="secondary-btn">Open settings</button>
+      </section>
 
-        <div id="hostScreen" class="panel-screen hidden">
-          <button class="text-btn" data-back>← Back to role selection</button>
+      <section class="workspace-grid">
+        <div class="control-panel">
+          <div id="roleScreen" class="panel-screen">
+            <section class="hero-card cosmic-card">
+              <span class="eyebrow">Welcome</span>
+              <h3>Choose how this computer will participate.</h3>
+              <p>Host is the computer running the game. Guest is the second player watching the stream and sending keys.</p>
+              <div class="hero-actions two-up">
+                <button id="chooseHost" class="primary-btn full">Host a game</button>
+                <button id="chooseGuest" class="secondary-btn full">Join a game</button>
+              </div>
+            </section>
 
-          <section class="mode-card">
-            <div class="card-head">
+            <section class="info-card cosmic-card">
+              <span class="eyebrow">Quick flow</span>
+              <div class="steps-grid">
+                <div class="step-pill"><strong>1</strong><span>Open Settings only if you need to change server or TURN.</span></div>
+                <div class="step-pill"><strong>2</strong><span>Host creates room and shares the code.</span></div>
+                <div class="step-pill"><strong>3</strong><span>Guest joins and waits for approval.</span></div>
+                <div class="step-pill"><strong>4</strong><span>Host enables Remote input, guest locks controls.</span></div>
+              </div>
+            </section>
+
+            <section class="info-card cosmic-card compact-note">
+              <span class="eyebrow">What users need</span>
+              <ul class="bullet-list">
+                <li>Most users never need to touch server settings.</li>
+                <li>Use the default setup unless you are testing locally or through a tunnel.</li>
+                <li>The debug console below explains what is happening in real time.</li>
+              </ul>
+            </section>
+          </div>
+
+          <div id="hostScreen" class="panel-screen hidden">
+            <button class="text-btn" data-back>← Return to Home</button>
+
+            <section class="mode-card cosmic-card">
               <span class="eyebrow">Host mode</span>
-              <h3>Run the session from this PC</h3>
-              <p>Use this on the machine that runs the game or browser tab.</p>
-            </div>
+              <h3>Run the game on this PC</h3>
+              <p>Create the room, share the code, and only enable remote input when the guest is connected.</p>
 
-            <div class="action-stack">
-              <button id="startHost" class="primary-btn full">Start hosting</button>
-              <button id="stopHost" class="danger-btn full" disabled>Stop session</button>
-            </div>
-
-            <div class="room-tile">
-              <div>
-                <span class="tile-label">Room code</span>
-                <strong id="roomCode">------</strong>
+              <div class="action-stack">
+                <button id="startHost" class="primary-btn full">Start hosting</button>
+                <button id="stopHost" class="danger-btn full" disabled>Stop session</button>
               </div>
-              <button id="copyRoom" class="secondary-btn">Copy code</button>
-            </div>
 
-            <label class="switch-card">
-              <input id="remoteInputToggle" type="checkbox" />
-              <div>
-                <strong>Remote input</strong>
-                <small>Allow guest keys on the currently focused host window.</small>
+              <div class="room-tile">
+                <div>
+                  <span class="tile-label">Room code</span>
+                  <strong id="roomCode">------</strong>
+                </div>
+                <button id="copyRoom" class="secondary-btn">Copy code</button>
               </div>
-            </label>
 
-            <button id="testLocalInput" class="secondary-btn full">Test input locally</button>
-          </section>
+              <label class="switch-card">
+                <input id="remoteInputToggle" type="checkbox" />
+                <div>
+                  <strong>Remote input</strong>
+                  <small>Allow the guest's keys to reach the currently focused window on the host PC.</small>
+                </div>
+              </label>
 
-          <section class="info-card">
-            <div class="card-head">
-              <span class="eyebrow">Checklist</span>
-              <h3>For controls to work</h3>
-            </div>
-            <ul class="bullet-list">
-              <li>Accept the guest first.</li>
-              <li>Enable Remote input.</li>
-              <li>Click the game or browser window on the host PC.</li>
-              <li>If the game runs as administrator, run the app as administrator too.</li>
-            </ul>
-          </section>
-        </div>
+              <button id="testLocalInput" class="secondary-btn full">Test input locally</button>
+            </section>
 
-        <div id="guestScreen" class="panel-screen hidden">
-          <button class="text-btn" data-back>← Back to role selection</button>
+            <section class="info-card cosmic-card">
+              <span class="eyebrow">Host checklist</span>
+              <ul class="bullet-list">
+                <li>Accept the guest request first.</li>
+                <li>Click the actual game or browser window on the host PC before the guest sends keys.</li>
+                <li>If the game runs as administrator, run this app as administrator too.</li>
+              </ul>
+            </section>
+          </div>
 
-          <section class="mode-card">
-            <div class="card-head">
+          <div id="guestScreen" class="panel-screen hidden">
+            <button class="text-btn" data-back>← Return to Home</button>
+
+            <section class="mode-card cosmic-card">
               <span class="eyebrow">Guest mode</span>
               <h3>Join the host and control your player</h3>
-              <p>Enter the room code, wait for approval, then lock controls.</p>
-            </div>
+              <p>Enter the room code, wait for approval, then lock controls while the stream panel is active.</p>
 
-            <label>
-              <span>Room code</span>
-              <input id="joinCode" type="text" maxlength="6" placeholder="ABC123" spellcheck="false" />
-            </label>
+              <label>
+                <span>Room code</span>
+                <input id="joinCode" type="text" maxlength="6" placeholder="ABC123" spellcheck="false" />
+              </label>
 
-            <div class="action-stack">
-              <button id="joinRoom" class="primary-btn full">Join room</button>
-              <button id="leaveGuest" class="danger-btn full" disabled>Leave session</button>
-            </div>
-
-            <label class="switch-card">
-              <input id="guestInputLock" type="checkbox" />
-              <div>
-                <strong>Lock controls</strong>
-                <small>When enabled, allowed keys are sent to the host until you press Escape.</small>
+              <div class="action-stack">
+                <button id="joinRoom" class="primary-btn full">Join room</button>
+                <button id="leaveGuest" class="danger-btn full" disabled>Leave session</button>
               </div>
-            </label>
+
+              <label class="switch-card">
+                <input id="guestInputLock" type="checkbox" />
+                <div>
+                  <strong>Lock controls</strong>
+                  <small>Allowed keys are sent to the host until you press Escape.</small>
+                </div>
+              </label>
+            </section>
+
+            <section class="info-card cosmic-card">
+              <span class="eyebrow">Allowed keys</span>
+              <div class="key-grid">
+                <span>W</span><span>A</span><span>S</span><span>D</span>
+                <span>↑</span><span>↓</span><span>←</span><span>→</span>
+                <span>Space</span><span>Enter</span><span>Shift</span><span>Ctrl</span>
+              </div>
+            </section>
+          </div>
+        </div>
+
+        <div class="content-column">
+          <section class="stage-panel cosmic-card">
+            <div id="hostVideoWrap" class="stage-card hidden">
+              <div class="stage-header">
+                <div>
+                  <span class="eyebrow">Host preview</span>
+                  <h3>Capture output</h3>
+                  <p id="hostSubtitle">No capture yet</p>
+                </div>
+                <div class="stage-actions">
+                  <button id="hostFullscreen" class="secondary-btn compact-btn">Fullscreen</button>
+                  <span id="hostLiveDot" class="live-pill">idle</span>
+                </div>
+              </div>
+              <div class="video-shell">
+                <video id="localVideo" autoplay muted playsinline></video>
+                <div id="hostEmpty" class="empty-state"><div><h3>No active capture</h3><p>Start hosting, then select your game window or display.</p></div></div>
+              </div>
+            </div>
+
+            <div id="guestVideoWrap" class="stage-card hidden">
+              <div class="stage-header">
+                <div>
+                  <span class="eyebrow">Remote stream</span>
+                  <h3>Host video feed</h3>
+                  <p id="guestSubtitle">Waiting for host</p>
+                </div>
+                <div class="stage-actions">
+                  <button id="guestFullscreen" class="secondary-btn compact-btn">Fullscreen</button>
+                  <span id="guestLiveDot" class="live-pill">idle</span>
+                </div>
+              </div>
+              <div id="remoteStage" class="video-shell focus-shell" tabindex="0">
+                <video id="remoteVideo" autoplay playsinline></video>
+                <div id="guestEmpty" class="empty-state"><div><h3>No stream yet</h3><p>Join a room and wait for the host to approve you.</p></div></div>
+                <div id="inputOverlay" class="input-overlay hidden"><strong>Controls locked</strong><span>Press Escape to unlock</span></div>
+              </div>
+            </div>
+
+            <div id="idleStage" class="stage-placeholder">
+              <div class="placeholder-card">
+                <span class="eyebrow">Mission control</span>
+                <h3>Your preview or remote stream appears here.</h3>
+                <p>Home keeps the setup simple. Host and Join are dedicated screens. Settings are hidden away so users do not accidentally break the connection.</p>
+                <div class="placeholder-grid">
+                  <div><strong>Local test</strong><p>Use localhost or your local IP with the signaling server running.</p></div>
+                  <div><strong>Internet test</strong><p>Use ngrok, Cloudflare Tunnel, Tailscale, or a VPS for the signaling server.</p></div>
+                  <div><strong>Input issues</strong><p>Enable Remote input, focus the host window, and watch the debug console.</p></div>
+                </div>
+              </div>
+            </div>
           </section>
 
-          <section class="info-card">
-            <div class="card-head">
-              <span class="eyebrow">Allowed keys</span>
-              <h3>Guest controls</h3>
+          <section class="debug-panel cosmic-card">
+            <div class="debug-header">
+              <div>
+                <span class="eyebrow">Diagnostics</span>
+                <h3>Debug console</h3>
+                <p>Real-time logs for signaling, streaming, input delivery, and helper events.</p>
+              </div>
+              <div class="debug-actions">
+                <button id="copyLog" class="secondary-btn">Copy logs</button>
+                <button id="clearLog" class="secondary-btn">Clear</button>
+              </div>
             </div>
-            <div class="key-grid">
-              <span>W</span><span>A</span><span>S</span><span>D</span>
-              <span>↑</span><span>↓</span><span>←</span><span>→</span>
-              <span>Space</span><span>Enter</span><span>Shift</span><span>Ctrl</span>
-            </div>
+            <pre id="debugLog" class="debug-log"></pre>
           </section>
         </div>
-      </aside>
-
-      <section class="content-column">
-        <section class="stage-panel">
-          <div id="hostVideoWrap" class="stage-card hidden">
-            <div class="stage-header">
-              <div>
-                <span class="eyebrow">Preview</span>
-                <h3>Host capture</h3>
-                <p id="hostSubtitle">No capture yet</p>
-              </div>
-              <span id="hostLiveDot" class="live-pill">idle</span>
-            </div>
-            <div class="video-shell">
-              <video id="localVideo" autoplay muted playsinline></video>
-              <div id="hostEmpty" class="empty-state">
-                <div>
-                  <h3>No active capture</h3>
-                  <p>Click Start hosting, then choose your screen or window.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div id="guestVideoWrap" class="stage-card hidden">
-            <div class="stage-header">
-              <div>
-                <span class="eyebrow">Remote stream</span>
-                <h3>Host video</h3>
-                <p id="guestSubtitle">Waiting for host</p>
-              </div>
-              <span id="guestLiveDot" class="live-pill">idle</span>
-            </div>
-            <div id="remoteStage" class="video-shell focus-shell" tabindex="0">
-              <video id="remoteVideo" autoplay playsinline></video>
-              <div id="guestEmpty" class="empty-state">
-                <div>
-                  <h3>No stream yet</h3>
-                  <p>Join a room and wait for the host to accept your request.</p>
-                </div>
-              </div>
-              <div id="inputOverlay" class="input-overlay hidden">
-                <strong>Controls locked</strong>
-                <span>Press Escape to unlock</span>
-              </div>
-            </div>
-          </div>
-
-          <div id="idleStage" class="stage-placeholder">
-            <div class="placeholder-card">
-              <span class="eyebrow">Ready to test</span>
-              <h2>Start on the left, then watch everything here.</h2>
-              <p>The live preview or remote stream appears here. The debug console below shows the real reason when something fails.</p>
-              <div class="placeholder-grid">
-                <div>
-                  <strong>Local test</strong>
-                  <p>Run the server and use localhost or your local IP.</p>
-                </div>
-                <div>
-                  <strong>Internet test</strong>
-                  <p>Use a VPS, ngrok, or another tunnel for the signaling server.</p>
-                </div>
-                <div>
-                  <strong>Input issue</strong>
-                  <p>Enable Remote input, focus the host window, and check the debug log.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section class="debug-panel">
-          <div class="debug-header">
-            <div>
-              <span class="eyebrow">Diagnostics</span>
-              <h3>Debug console</h3>
-              <p>Use this to verify server, signaling, stream, data channel, and input events.</p>
-            </div>
-            <div class="debug-actions">
-              <button id="copyLog" class="secondary-btn">Copy logs</button>
-              <button id="clearLog" class="secondary-btn">Clear</button>
-            </div>
-          </div>
-          <pre id="debugLog" class="debug-log"></pre>
-        </section>
       </section>
     </main>
+  </div>
+
+  <div id="settingsModal" class="modal hidden">
+    <div class="modal-card settings-modal-card">
+      <div class="modal-top">
+        <div>
+          <span class="eyebrow">Advanced settings</span>
+          <h3>Connection settings</h3>
+          <p>Most users should leave these at their default values.</p>
+        </div>
+        <button id="closeSettingsModal" class="text-btn">Close</button>
+      </div>
+
+      <div class="settings-grid">
+        <label>
+          <span>Signaling server</span>
+          <input id="serverUrl" type="text" value="ws://localhost:8787" spellcheck="false" />
+        </label>
+        <label>
+          <span>STUN URL</span>
+          <input id="stunUrl" type="text" value="stun:stun.l.google.com:19302" spellcheck="false" />
+        </label>
+        <label>
+          <span>TURN URL, optional</span>
+          <input id="turnUrl" type="text" placeholder="turn:your-domain.com:3478" spellcheck="false" />
+        </label>
+        <div class="split-fields">
+          <label>
+            <span>TURN username</span>
+            <input id="turnUsername" type="text" placeholder="optional" spellcheck="false" />
+          </label>
+          <label>
+            <span>TURN password</span>
+            <input id="turnPassword" type="password" placeholder="optional" />
+          </label>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button id="saveSettings" class="primary-btn">Save settings</button>
+      </div>
+    </div>
   </div>
 
   <div id="toastHost" class="modal hidden">
