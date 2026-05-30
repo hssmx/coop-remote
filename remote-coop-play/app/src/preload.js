@@ -5,5 +5,10 @@ contextBridge.exposeInMainWorld("remoteCoop", {
   sendInput: (payload) => ipcRenderer.invoke("input:send", payload),
   releaseAllKeys: () => ipcRenderer.invoke("input:release-all"),
   inputStatus: () => ipcRenderer.invoke("input:status"),
-  openExternal: (url) => ipcRenderer.invoke("app:open-external", url)
+  openExternal: (url) => ipcRenderer.invoke("app:open-external", url),
+  onDebugEvent: (callback) => {
+    const listener = (_event, payload) => callback(payload);
+    ipcRenderer.on("debug:event", listener);
+    return () => ipcRenderer.removeListener("debug:event", listener);
+  }
 });

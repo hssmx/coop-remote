@@ -3,16 +3,27 @@ const { app, BrowserWindow, ipcMain, session, desktopCapturer, shell } = require
 const { createInputInjector } = require("./lib/input-injector");
 
 let mainWindow;
-const inputInjector = createInputInjector();
+
+function emitDebug(payload) {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send("debug:event", {
+      at: new Date().toISOString(),
+      source: "main",
+      ...payload
+    });
+  }
+}
+
+const inputInjector = createInputInjector((entry) => emitDebug({ source: "input", ...entry }));
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 1280,
-    height: 820,
-    minWidth: 1040,
-    minHeight: 720,
+    width: 1320,
+    height: 860,
+    minWidth: 1080,
+    minHeight: 740,
     title: "Remote Coop Play",
-    backgroundColor: "#080B12",
+    backgroundColor: "#0B0E13",
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
@@ -50,7 +61,7 @@ app.whenReady().then(() => {
       { useSystemPicker: true }
     );
   } catch (error) {
-    console.warn("Display media handler not available:", error.message);
+    emitDebug({ level: "warn", message: `Display media handler not available: ${error.message}` });
   }
 
   createWindow();
@@ -70,20 +81,27 @@ app.on("window-all-closed", () => {
 });
 
 ipcMain.handle("input:set-enabled", async (_event, enabled) => {
-  inputInjector.setEnabled(Boolean(enabled));
-  return inputInjector.status();
+  const status = inputInjector.setEnabled(Boolean(enabled));
+  emitDebug({ level: "info", message: `Remote input ${enabled ? "enabled" : "disabled"}`, data: status });
+  return status;
 });
 
 ipcMain.handle("input:send", async (_event, payload) => {
-  return inputInjector.handleRemoteInput(payload);
+  const result = inputInjector.handleRemoteInput(payload);
+  emitDebug({ level: result.ok ? "input" : "error", message: `Input ${payload?.action || "?"} ${payload?.code || "?"}`, data: result });
+  return result;
 });
 
 ipcMain.handle("input:release-all", async () => {
-  return inputInjector.releaseAll();
+  const result = inputInjector.releaseAll();
+  emitDebug({ level: "input", message: "Released all pressed keys", data: result });
+  return result;
 });
 
 ipcMain.handle("input:status", async () => {
-  return inputInjector.status();
+  const status = inputInjector.status();
+  emitDebug({ level: "info", message: "Input status requested", data: status });
+  return status;
 });
 
 ipcMain.handle("app:open-external", async (_event, url) => {

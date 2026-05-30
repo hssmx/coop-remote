@@ -10,7 +10,13 @@ public static class KeyboardSender
     public struct INPUT
     {
         public UInt32 type;
-        public KEYBDINPUT ki;
+        public InputUnion U;
+    }
+
+    [StructLayout(LayoutKind.Explicit)]
+    public struct InputUnion
+    {
+        [FieldOffset(0)] public KEYBDINPUT ki;
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -20,31 +26,47 @@ public static class KeyboardSender
         public UInt16 wScan;
         public UInt32 dwFlags;
         public UInt32 time;
-        public IntPtr dwExtraInfo;
+        public UIntPtr dwExtraInfo;
     }
 
     [DllImport("user32.dll", SetLastError = true)]
     public static extern UInt32 SendInput(UInt32 nInputs, INPUT[] pInputs, Int32 cbSize);
 
-    public const UInt32 INPUT_KEYBOARD = 1;
-    public const UInt32 KEYEVENTF_KEYUP = 0x0002;
-    public const UInt32 KEYEVENTF_EXTENDEDKEY = 0x0001;
+    [DllImport("user32.dll")]
+    public static extern UInt32 MapVirtualKey(UInt32 uCode, UInt32 uMapType);
 
-    public static void SendKey(UInt16 vk, bool keyUp, bool extended)
+    [DllImport("user32.dll")]
+    public static extern void keybd_event(byte bVk, byte bScan, UInt32 dwFlags, UIntPtr dwExtraInfo);
+
+    public const UInt32 INPUT_KEYBOARD = 1;
+    public const UInt32 KEYEVENTF_EXTENDEDKEY = 0x0001;
+    public const UInt32 KEYEVENTF_KEYUP = 0x0002;
+
+    public static string SendKey(UInt16 vk, bool keyUp, bool extended)
     {
         INPUT[] inputs = new INPUT[1];
         inputs[0].type = INPUT_KEYBOARD;
-        inputs[0].ki.wVk = vk;
-        inputs[0].ki.wScan = 0;
-        inputs[0].ki.dwFlags = (keyUp ? KEYEVENTF_KEYUP : 0) | (extended ? KEYEVENTF_EXTENDEDKEY : 0);
-        inputs[0].ki.time = 0;
-        inputs[0].ki.dwExtraInfo = IntPtr.Zero;
+        inputs[0].U.ki.wVk = vk;
+        inputs[0].U.ki.wScan = 0;
+        inputs[0].U.ki.dwFlags = (keyUp ? KEYEVENTF_KEYUP : 0) | (extended ? KEYEVENTF_EXTENDEDKEY : 0);
+        inputs[0].U.ki.time = 0;
+        inputs[0].U.ki.dwExtraInfo = UIntPtr.Zero;
 
-        UInt32 sent = SendInput(1, inputs, Marshal.SizeOf(typeof(INPUT)));
-        if (sent != 1)
+        int inputSize = Marshal.SizeOf(typeof(INPUT));
+        UInt32 sent = SendInput(1, inputs, inputSize);
+
+        if (sent == 1)
         {
-            throw new Exception("SendInput failed.");
+            return "SENDINPUT_OK size=" + inputSize;
         }
+
+        int lastError = Marshal.GetLastWin32Error();
+
+        // Fallback for machines where the structured SendInput call fails.
+        byte scan = (byte)MapVirtualKey(vk, 0);
+        UInt32 flags = (keyUp ? KEYEVENTF_KEYUP : 0) | (extended ? KEYEVENTF_EXTENDEDKEY : 0);
+        keybd_event((byte)vk, scan, flags, UIntPtr.Zero);
+        return "KEYBD_EVENT_FALLBACK lastError=" + lastError + " size=" + inputSize;
     }
 }
 "@
@@ -69,7 +91,7 @@ $KeyMap = @{
     "ControlRight" = @{ vk = 0x11; ext = $false }
 }
 
-[Console]::Out.WriteLine("READY")
+[Console]::Out.WriteLine("READY pid=" + $PID)
 [Console]::Out.Flush()
 
 while ($true) {
@@ -90,12 +112,12 @@ while ($true) {
 
         $isUp = $action -eq "up"
         $item = $KeyMap[$code]
-        [KeyboardSender]::SendKey([UInt16]$item.vk, [bool]$isUp, [bool]$item.ext)
-        [Console]::Out.WriteLine("OK " + $action + " " + $code)
+        $result = [KeyboardSender]::SendKey([UInt16]$item.vk, [bool]$isUp, [bool]$item.ext)
+        [Console]::Out.WriteLine("OK " + $action + " " + $code + " " + $result)
         [Console]::Out.Flush()
     }
     catch {
-        [Console]::Error.WriteLine($_.Exception.Message)
+        [Console]::Error.WriteLine("ERROR " + $_.Exception.Message)
         [Console]::Error.Flush()
     }
 }

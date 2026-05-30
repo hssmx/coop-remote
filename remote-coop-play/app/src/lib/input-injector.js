@@ -28,16 +28,22 @@ function resolveKeyboardHelperPath() {
   return candidates[0];
 }
 
-function createInputInjector() {
+function createInputInjector(onLog = () => {}) {
   let enabled = false;
   let helper = null;
   let helperReady = false;
   let helperError = null;
+  let lastHelperLine = null;
   const pressed = new Set();
+
+  function log(level, message, data = undefined) {
+    try { onLog({ level, message, data }); } catch {}
+  }
 
   function ensureHelper() {
     if (process.platform !== "win32") {
       helperError = "Remote input injection is currently implemented for Windows only.";
+      log("error", helperError);
       return false;
     }
 
@@ -47,12 +53,15 @@ function createInputInjector() {
 
     if (!fs.existsSync(helperPath)) {
       helperError = `Keyboard helper not found at: ${helperPath}`;
-      console.error(helperError);
+      log("error", helperError);
       return false;
     }
 
     helperReady = false;
     helperError = null;
+    lastHelperLine = null;
+
+    log("info", "Starting keyboard helper", { helperPath });
 
     helper = spawn(
       "powershell.exe",
@@ -71,20 +80,25 @@ function createInputInjector() {
     );
 
     helper.stdout.on("data", (chunk) => {
-      const text = chunk.toString("utf8").trim();
-      if (!text) return;
-      if (text.includes("READY")) helperReady = true;
-      console.log("[key-helper]", text);
+      const lines = chunk.toString("utf8").split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+      for (const line of lines) {
+        lastHelperLine = line;
+        if (line.includes("READY")) helperReady = true;
+        log(line.includes("ERROR") ? "error" : "input", `helper: ${line}`);
+      }
     });
 
     helper.stderr.on("data", (chunk) => {
-      helperError = chunk.toString("utf8").trim();
-      console.error("[key-helper-error]", helperError);
+      const text = chunk.toString("utf8").trim();
+      if (!text) return;
+      helperError = text;
+      lastHelperLine = text;
+      log("error", `helper stderr: ${text}`);
     });
 
     helper.on("error", (error) => {
       helperError = error.message;
-      console.error("[key-helper-spawn-error]", helperError);
+      log("error", `Keyboard helper spawn failed: ${helperError}`);
       helper = null;
       helperReady = false;
       pressed.clear();
@@ -95,6 +109,7 @@ function createInputInjector() {
       if (code !== 0 && code !== null) {
         helperError = `Keyboard helper exited with code ${code}.`;
       }
+      log(code === 0 || code === null ? "info" : "error", `Keyboard helper exited`, { code });
       helper = null;
       pressed.clear();
     });
@@ -104,15 +119,16 @@ function createInputInjector() {
 
   function sendToHelper(payload) {
     if (!ensureHelper() || !helper || !helper.stdin.writable) {
-      return { ok: false, error: helperError || "Keyboard helper is not available." };
+      return { ok: false, error: helperError || "Keyboard helper is not available.", lastHelperLine };
     }
 
     try {
       helper.stdin.write(`${JSON.stringify(payload)}\n`);
-      return { ok: true };
+      return { ok: true, lastHelperLine };
     } catch (error) {
       helperError = error.message;
-      return { ok: false, error: helperError };
+      log("error", "Failed writing to keyboard helper", { error: helperError, payload });
+      return { ok: false, error: helperError, lastHelperLine };
     }
   }
 
@@ -126,21 +142,22 @@ function createInputInjector() {
   function handleRemoteInput(payload) {
     const normalized = normalizeInput(payload);
     if (!normalized) {
-      return { ok: false, ignored: true, reason: "Key not allowed." };
+      return { ok: false, ignored: true, reason: "Key not allowed.", payload };
     }
 
     if (!enabled) {
-      return { ok: false, ignored: true, reason: "Remote input disabled by host." };
+      return { ok: false, ignored: true, reason: "Remote input disabled by host.", payload: normalized };
     }
 
     if (normalized.action === "down") {
-      if (pressed.has(normalized.code)) return { ok: true, ignored: true, reason: "Already pressed." };
+      if (pressed.has(normalized.code)) return { ok: true, ignored: true, reason: "Already pressed.", payload: normalized };
       pressed.add(normalized.code);
     } else {
       pressed.delete(normalized.code);
     }
 
-    return sendToHelper(normalized);
+    const result = sendToHelper(normalized);
+    return { ...result, payload: normalized, pressed: Array.from(pressed) };
   }
 
   function releaseAll() {
@@ -148,7 +165,7 @@ function createInputInjector() {
       sendToHelper({ action: "up", code });
       pressed.delete(code);
     }
-    return { ok: true };
+    return { ok: true, pressed: [] };
   }
 
   function shutdown() {
@@ -168,9 +185,12 @@ function createInputInjector() {
       enabled,
       helperReady,
       helperError,
+      lastHelperLine,
       allowedCodes: Array.from(ALLOWED_CODES),
       pressed: Array.from(pressed),
-      helperPath: resolveKeyboardHelperPath()
+      helperPath: resolveKeyboardHelperPath(),
+      platform: process.platform,
+      packaged: Boolean(app && app.isPackaged)
     };
   }
 
