@@ -1,0 +1,20 @@
+# Copy this file to turnserver.conf and edit values.
+
+listening-port=3478
+fingerprint
+lt-cred-mech
+
+# Replace with your public server IP or domain.
+realm=remote-coop-play
+
+# Replace this with strong credentials.
+user=remoteuser:remotepassword
+
+# For production, configure TLS certificates and expose 5349 too.
+# cert=/etc/letsencrypt/live/your-domain/fullchain.pem
+# pkey=/etc/letsencrypt/live/your-domain/privkey.pem
+
+no-multicast-peers
+no-cli
+no-tlsv1
+no-tlsv1_1

@@ -1,0 +1,15 @@
+appId: com.ensamprompters.remotecoopplay
+productName: Remote Coop Play
+directories:
+  output: dist
+files:
+  - src/**/*
+  - assets/**/*
+  - package.json
+win:
+  target:
+    - portable
+    - nsis
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true

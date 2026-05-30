@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    http-equiv="Content-Security-Policy"
+    content="default-src 'self'; connect-src * ws: wss:; media-src 'self' blob:; img-src 'self' data: blob:; script-src 'self'; style-src 'self' 'unsafe-inline';"
+  />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Remote Coop Play</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark">RC</div>
+        <div>
+          <h1>Remote Coop Play</h1>
+          <p>Turn local co-op games into online sessions</p>
+        </div>
+      </div>
+
+      <div class="status-strip">
+        <div class="status-pill" id="signalStatus">Signaling: disconnected</div>
+        <div class="status-pill" id="rtcStatus">WebRTC: idle</div>
+        <div class="status-pill" id="latencyStatus">Latency: -- ms</div>
+      </div>
+    </header>
+
+    <main>
+      <section id="roleScreen" class="role-screen">
+        <div class="hero">
+          <span class="eyebrow">low latency • consent based • Windows</span>
+          <h2>Play offline 2-player games online.</h2>
+          <p>
+            The host streams the game. The guest sends only safe game keys.
+            Perfect for games like Fireboy & Watergirl, emulators, old Flash games, and local co-op browser games.
+          </p>
+        </div>
+
+        <div class="role-grid">
+          <button class="role-card" id="chooseHost">
+            <span class="role-icon">🎮</span>
+            <strong>Host a game</strong>
+            <span>Run the game on this PC, share the screen, accept a guest, and optionally enable remote input.</span>
+          </button>
+
+          <button class="role-card" id="chooseGuest">
+            <span class="role-icon">👥</span>
+            <strong>Join a game</strong>
+            <span>Enter a room code, watch the stream, and send player controls with low delay.</span>
+          </button>
+        </div>
+
+        <div class="settings-card">
+          <div class="section-title">
+            <h3>Connection settings</h3>
+            <p>Use localhost for testing. Use your VPS WebSocket URL for internet sessions.</p>
+          </div>
+
+          <div class="form-grid">
+            <label>
+              Signaling server
+              <input id="serverUrl" type="text" value="ws://localhost:8787" spellcheck="false" />
+            </label>
+
+            <label>
+              STUN URL
+              <input id="stunUrl" type="text" value="stun:stun.l.google.com:19302" spellcheck="false" />
+            </label>
+
+            <label>
+              TURN URL, optional
+              <input id="turnUrl" type="text" placeholder="turn:your-domain.com:3478" spellcheck="false" />
+            </label>
+
+            <label>
+              TURN username
+              <input id="turnUsername" type="text" placeholder="optional" spellcheck="false" />
+            </label>
+
+            <label>
+              TURN password
+              <input id="turnPassword" type="password" placeholder="optional" />
+            </label>
+          </div>
+
+          <button id="saveSettings" class="secondary-btn">Save settings</button>
+        </div>
+      </section>
+
+      <section id="hostScreen" class="workspace hidden">
+        <aside class="side-panel">
+          <button class="back-btn" data-back>← Back</button>
+
+          <div class="section-title">
+            <h3>Host session</h3>
+            <p>Start capture, create a room, then accept the guest.</p>
+          </div>
+
+          <button id="startHost" class="primary-btn">Start hosting</button>
+          <button id="stopHost" class="danger-btn" disabled>Stop session</button>
+
+          <div class="room-card">
+            <span>Room code</span>
+            <strong id="roomCode">------</strong>
+            <button id="copyRoom" class="secondary-btn small">Copy</button>
+          </div>
+
+          <label class="toggle-row">
+            <input id="remoteInputToggle" type="checkbox" />
+            <span>
+              <strong>Remote input</strong>
+              <small>Allow guest keys on this PC</small>
+            </span>
+          </label>
+
+          <div class="hint-box">
+            <strong>Host checklist</strong>
+            <p>Keep the game window focused. Use borderless/windowed mode. Disable remote input when not playing.</p>
+          </div>
+
+          <div class="key-list">
+            <span>Allowed keys</span>
+            <code>W A S D</code>
+            <code>↑ ↓ ← →</code>
+            <code>Space Enter Shift Ctrl</code>
+          </div>
+        </aside>
+
+        <section class="video-stage">
+          <div class="video-header">
+            <div>
+              <h3>Host preview</h3>
+              <p id="hostSubtitle">No capture yet</p>
+            </div>
+            <div class="live-dot" id="hostLiveDot">idle</div>
+          </div>
+
+          <video id="localVideo" autoplay muted playsinline></video>
+
+          <div id="hostEmpty" class="empty-state">
+            <h3>Start hosting to capture your screen.</h3>
+            <p>The guest will not connect until you approve them.</p>
+          </div>
+        </section>
+      </section>
+
+      <section id="guestScreen" class="workspace hidden">
+        <aside class="side-panel">
+          <button class="back-btn" data-back>← Back</button>
+
+          <div class="section-title">
+            <h3>Join session</h3>
+            <p>Enter the host's room code.</p>
+          </div>
+
+          <label>
+            Room code
+            <input id="joinCode" type="text" maxlength="6" placeholder="ABC123" spellcheck="false" />
+          </label>
+
+          <button id="joinRoom" class="primary-btn">Join room</button>
+          <button id="leaveGuest" class="danger-btn" disabled>Leave session</button>
+
+          <label class="toggle-row">
+            <input id="guestInputLock" type="checkbox" />
+            <span>
+              <strong>Lock controls</strong>
+              <small>Send keys to host while stream is focused</small>
+            </span>
+          </label>
+
+          <div class="hint-box">
+            <strong>Guest controls</strong>
+            <p>Click the stream, enable Lock controls, then play. Press Escape to unlock.</p>
+          </div>
+
+          <div class="key-list">
+            <span>Sent keys</span>
+            <code>W A S D</code>
+            <code>↑ ↓ ← →</code>
+            <code>Space Enter Shift Ctrl</code>
+          </div>
+        </aside>
+
+        <section id="remoteStage" class="video-stage focus-stage" tabindex="0">
+          <div class="video-header">
+            <div>
+              <h3>Remote stream</h3>
+              <p id="guestSubtitle">Waiting for host</p>
+            </div>
+            <div class="live-dot" id="guestLiveDot">idle</div>
+          </div>
+
+          <video id="remoteVideo" autoplay playsinline></video>
+
+          <div id="guestEmpty" class="empty-state">
+            <h3>Join a room to start.</h3>
+            <p>When connected, the host's game will appear here.</p>
+          </div>
+
+          <div id="inputOverlay" class="input-overlay hidden">
+            <strong>Controls locked</strong>
+            <span>Press Escape to unlock</span>
+          </div>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <div id="toastHost" class="toast hidden">
+    <strong>Guest wants to join</strong>
+    <p>Approve only if you trust this player.</p>
+    <div>
+      <button id="acceptGuest" class="primary-btn small">Accept</button>
+      <button id="rejectGuest" class="secondary-btn small">Reject</button>
+    </div>
+  </div>
+
+  <div id="toast" class="toast small-toast hidden"></div>
+
+  <script src="./app.js"></script>
+</body>
+</html>

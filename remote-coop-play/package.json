@@ -1,0 +1,21 @@
+{
+  "name": "remote-coop-play",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Low-latency remote local co-op game sharing app with Electron, WebRTC and consent-based remote input.",
+  "scripts": {
+    "install:all": "npm install --prefix server && npm install --prefix app",
+    "server": "npm run dev --prefix server",
+    "app": "npm run dev --prefix app",
+    "package:win": "npm run dist:win --prefix app"
+  },
+  "keywords": [
+    "electron",
+    "webrtc",
+    "remote-play",
+    "local-coop",
+    "windows"
+  ],
+  "author": "ENSAM PROMPTERS",
+  "license": "MIT"
+}
