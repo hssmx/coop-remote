@@ -11,6 +11,8 @@ const ui = {
   quickOpenSettings: $("#quickOpenSettings"),
   settingsModal: $("#settingsModal"),
   closeSettingsModal: $("#closeSettingsModal"),
+  debugPanel: $("#debugPanel"),
+  debugDrawerToggle: $("#debugDrawerToggle"),
   idleStage: $("#idleStage"),
   hostVideoWrap: $("#hostVideoWrap"),
   guestVideoWrap: $("#guestVideoWrap"),
@@ -115,6 +117,12 @@ function setActiveNav(screen) {
   if (ui.homeNav) ui.homeNav.classList.toggle("active", screen === "role");
   if (ui.hostNav) ui.hostNav.classList.toggle("active", screen === "host");
   if (ui.guestNav) ui.guestNav.classList.toggle("active", screen === "guest");
+}
+
+function setDebugCollapsed(collapsed) {
+  if (!ui.debugPanel || !ui.debugDrawerToggle) return;
+  ui.debugPanel.classList.toggle("collapsed", collapsed);
+  ui.debugDrawerToggle.textContent = collapsed ? "Open logs" : "Hide logs";
 }
 
 function openSettingsModal() {
@@ -634,6 +642,7 @@ function bindEvents() {
   ui.quickOpenSettings.addEventListener("click", openSettingsModal);
   ui.closeSettingsModal.addEventListener("click", closeSettingsModal);
   ui.settingsModal.addEventListener("click", (event) => { if (event.target === ui.settingsModal) closeSettingsModal(); });
+  ui.debugDrawerToggle.addEventListener("click", () => setDebugCollapsed(!ui.debugPanel.classList.contains("collapsed")));
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && !ui.settingsModal.classList.contains("hidden")) closeSettingsModal();
   });
@@ -644,7 +653,7 @@ function bindEvents() {
   ui.guestFullscreen.addEventListener("click", () => toggleFullscreen(ui.remoteStage, "guest stream"));
   ui.startHost.addEventListener("click", startHost);
   ui.stopHost.addEventListener("click", () => resetHost());
-  ui.copyRoom.addEventListener("click", async () => { if (!state.roomCode) return; await navigator.clipboard.writeText(state.roomCode); showToast("Room code copied."); });
+  ui.copyRoom.addEventListener("click", async () => { if (!state.roomCode) return; await navigator.clipboard.writeText(state.roomCode); showToast("Room code copied. Send it to your friend."); });
 
   ui.remoteInputToggle.addEventListener("change", async () => {
     const enabled = ui.remoteInputToggle.checked;
@@ -677,6 +686,7 @@ function bindEvents() {
 loadSettings();
 bindEvents();
 showScreen("role");
+setDebugCollapsed(true);
 updateSignalStatus("disconnected");
 updateRtcStatus("idle");
 setLatency(null);
