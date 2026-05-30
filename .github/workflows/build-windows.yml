@@ -1,0 +1,38 @@
+name: Build Windows Executable
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build-windows:
+    name: Build Remote Coop Play for Windows
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install app dependencies
+        working-directory: app
+        run: npm install
+
+      - name: Build Windows executable
+        working-directory: app
+        run: npm run dist:win
+
+      - name: Upload client-ready executables
+        uses: actions/upload-artifact@v4
+        with:
+          name: Remote-Coop-Play-Windows
+          path: |
+            app/dist/*.exe
+            app/dist/*.blockmap
+            app/dist/latest.yml
+          if-no-files-found: error
