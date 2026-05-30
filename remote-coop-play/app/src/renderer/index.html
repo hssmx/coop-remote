@@ -8,135 +8,89 @@
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
-  <div class="space-field" aria-hidden="true"></div>
-
   <div class="app-frame">
     <aside class="sidebar">
       <div class="brand-block">
-        <div class="brand-mark">
-          <span>R</span>
-        </div>
+        <div class="brand-mark">R</div>
         <div>
           <h1>Remote Coop Play</h1>
-          <p>Local co-op, streamed cleanly.</p>
+          <p>Local co-op, online.</p>
         </div>
       </div>
 
-      <nav class="main-nav" aria-label="Primary navigation">
-        <button id="homeNav" class="nav-btn active">
-          <span class="nav-icon">⌂</span>
-          <span class="nav-copy"><strong>Home</strong><small>Start a session</small></span>
-        </button>
-        <button id="hostNav" class="nav-btn">
-          <span class="nav-icon">↑</span>
-          <span class="nav-copy"><strong>Host</strong><small>Run the game</small></span>
-        </button>
-        <button id="guestNav" class="nav-btn">
-          <span class="nav-icon">↓</span>
-          <span class="nav-copy"><strong>Join</strong><small>Play remotely</small></span>
-        </button>
-        <button id="settingsNav" class="nav-btn subtle">
-          <span class="nav-icon">⚙</span>
-          <span class="nav-copy"><strong>Settings</strong><small>Advanced network</small></span>
-        </button>
+      <nav class="main-nav">
+        <button id="homeNav" class="nav-btn active"><span>Home</span><small>Start here</small></button>
+        <button id="hostNav" class="nav-btn"><span>Host</span><small>Run the game</small></button>
+        <button id="guestNav" class="nav-btn"><span>Join</span><small>Play remotely</small></button>
+        <button id="settingsNav" class="nav-btn muted"><span>Settings</span><small>Advanced</small></button>
       </nav>
 
       <section class="status-stack">
-        <div class="status-card">
-          <span>Signal</span>
-          <strong id="signalStatus">Signaling: disconnected</strong>
-        </div>
-        <div class="status-card">
-          <span>Connection</span>
-          <strong id="rtcStatus">WebRTC: idle</strong>
-        </div>
-        <div class="status-card">
-          <span>Delay</span>
-          <strong id="latencyStatus">Latency: -- ms</strong>
-        </div>
-      </section>
-
-      <section class="small-note">
-        <span class="eyebrow">Default safe flow</span>
-        <p>Players only see Host and Join. Network settings stay hidden unless you open them.</p>
+        <div><span>Signal</span><strong id="signalStatus">Signaling: disconnected</strong></div>
+        <div><span>Connection</span><strong id="rtcStatus">WebRTC: idle</strong></div>
+        <div><span>Latency</span><strong id="latencyStatus">Latency: -- ms</strong></div>
       </section>
     </aside>
 
     <main class="main-shell">
       <header class="topbar">
         <div>
-          <span class="eyebrow">Mission control</span>
-          <h2>Start the room, share the code, play together.</h2>
-          <p>Designed for quick testing with ngrok now, and a proper VPS later.</p>
+          <span class="eyebrow">Ready</span>
+          <h2>Host the game or join a room.</h2>
+          <p>Simple setup for remote local co-op. Network settings are hidden unless needed.</p>
         </div>
-        <div class="topbar-actions">
-          <button id="quickOpenSettings" class="secondary-btn">Connection settings</button>
-        </div>
+        <button id="quickOpenSettings" class="secondary-btn">Settings</button>
       </header>
 
       <section class="workspace">
         <section class="task-panel">
           <div id="roleScreen" class="panel-screen">
-            <section class="home-hero card">
-              <div class="home-hero-copy">
-                <span class="eyebrow">Choose a side</span>
-                <h3>One PC hosts. The other joins.</h3>
-                <p>Keep the technical parts out of sight. Let the user pick a role, then guide them one step at a time.</p>
-              </div>
+            <section class="card hero-card">
+              <span class="eyebrow">Choose mode</span>
+              <h3>What is this computer doing?</h3>
+              <p>Use Host on the PC running the game. Use Join on the second player's PC.</p>
 
-              <div class="role-choice-grid">
-                <article class="role-choice">
-                  <div class="role-choice-top">
-                    <div class="choice-symbol">↑</div>
-                    <div>
-                      <h4>Host</h4>
-                      <p>Use this on the computer running the game.</p>
-                    </div>
-                  </div>
+              <div class="mode-grid">
+                <article class="mode-card">
+                  <h4>Host</h4>
+                  <p>Create a room and share the game screen.</p>
                   <button id="chooseHost" class="primary-btn full">Host a game</button>
                 </article>
 
-                <article class="role-choice">
-                  <div class="role-choice-top">
-                    <div class="choice-symbol">↓</div>
-                    <div>
-                      <h4>Join</h4>
-                      <p>Use this on the second player's computer.</p>
-                    </div>
-                  </div>
+                <article class="mode-card">
+                  <h4>Join</h4>
+                  <p>Enter the room code and play remotely.</p>
                   <button id="chooseGuest" class="secondary-btn full">Join a room</button>
                 </article>
               </div>
             </section>
 
-            <section class="card soft-card">
-              <span class="eyebrow">Simple user flow</span>
-              <div class="flow-list">
-                <div class="flow-item"><strong>01</strong><div><h4>Host creates room</h4><p>The host starts capture and gets a room code.</p></div></div>
-                <div class="flow-item"><strong>02</strong><div><h4>Guest enters code</h4><p>The host approves the guest before any control is allowed.</p></div></div>
-                <div class="flow-item"><strong>03</strong><div><h4>Play with control lock</h4><p>The guest locks controls. Escape unlocks instantly.</p></div></div>
+            <section class="card">
+              <span class="eyebrow">How it works</span>
+              <div class="steps">
+                <div><strong>1</strong><p>Host starts the room and copies the code.</p></div>
+                <div><strong>2</strong><p>Guest enters the code and waits for approval.</p></div>
+                <div><strong>3</strong><p>Host enables input, guest locks controls, then you play.</p></div>
               </div>
             </section>
 
             <section class="card compact-card">
-              <span class="eyebrow">Testing setup</span>
+              <span class="eyebrow">Tip</span>
               <ul class="bullet-list">
-                <li>For ngrok, use the <strong>wss://</strong> URL in Settings.</li>
-                <li>For local network tests, use the host PC's local IP.</li>
-                <li>Open the debug drawer only when something fails.</li>
+                <li>Use <strong>wss://</strong> for ngrok URLs.</li>
+                <li>Use Settings only when changing server, STUN, or TURN.</li>
+                <li>Use the debug drawer only when something fails.</li>
               </ul>
             </section>
           </div>
 
           <div id="hostScreen" class="panel-screen hidden">
-            <button class="text-btn" data-back>← Back to Home</button>
+            <button class="text-btn" data-back>← Back</button>
 
-            <section class="card section-stack">
-              <div class="section-head">
-                <span class="eyebrow">Host mode</span>
-                <h3>Share the game from this PC.</h3>
-                <p>Start capture, copy the room code, accept the guest, then enable remote input.</p>
-              </div>
+            <section class="card stack">
+              <span class="eyebrow">Host</span>
+              <h3>Share this PC.</h3>
+              <p>Start hosting, copy the room code, accept the guest, then enable remote input.</p>
 
               <div class="button-row">
                 <button id="startHost" class="primary-btn full">Start hosting</button>
@@ -144,10 +98,10 @@
               </div>
 
               <div class="room-card">
-                <div class="room-card-head">
+                <div class="room-head">
                   <div>
                     <span class="eyebrow">Room code</span>
-                    <p>Send this to the guest.</p>
+                    <p>Send this code to the guest.</p>
                   </div>
                   <button id="copyRoom" class="secondary-btn small-btn">Copy</button>
                 </div>
@@ -158,32 +112,30 @@
                 <input id="remoteInputToggle" type="checkbox" />
                 <div>
                   <strong>Remote input</strong>
-                  <small>Lets the guest send allowed game keys to the focused host window.</small>
+                  <small>Allows the guest to send game keys to the focused host window.</small>
                 </div>
               </label>
 
-              <button id="testLocalInput" class="secondary-btn full">Test keyboard injection</button>
+              <button id="testLocalInput" class="secondary-btn full">Test keyboard input</button>
             </section>
 
             <section class="card compact-card">
-              <span class="eyebrow">Before playing</span>
+              <span class="eyebrow">Checklist</span>
               <ul class="bullet-list">
-                <li>Accept the guest request when it appears.</li>
-                <li>Click the game or browser window on the host PC.</li>
-                <li>If the game is running as administrator, run this app as administrator too.</li>
+                <li>Accept the guest request.</li>
+                <li>Click the game/browser window before playing.</li>
+                <li>Run this app as administrator if the game is also administrator.</li>
               </ul>
             </section>
           </div>
 
           <div id="guestScreen" class="panel-screen hidden">
-            <button class="text-btn" data-back>← Back to Home</button>
+            <button class="text-btn" data-back>← Back</button>
 
-            <section class="card section-stack">
-              <div class="section-head">
-                <span class="eyebrow">Join mode</span>
-                <h3>Connect to the host room.</h3>
-                <p>Enter the room code, wait for approval, then lock controls when you are ready to play.</p>
-              </div>
+            <section class="card stack">
+              <span class="eyebrow">Join</span>
+              <h3>Connect to a host.</h3>
+              <p>Enter the room code, wait for approval, then lock controls.</p>
 
               <label>
                 <span>Room code</span>
@@ -199,7 +151,7 @@
                 <input id="guestInputLock" type="checkbox" />
                 <div>
                   <strong>Lock controls</strong>
-                  <small>Send allowed keys to the host until you press Escape.</small>
+                  <small>Send allowed keys to the host. Press Escape to unlock.</small>
                 </div>
               </label>
             </section>
@@ -221,7 +173,7 @@
               <div class="stage-header">
                 <div>
                   <span class="eyebrow">Host preview</span>
-                  <h3>Capture output</h3>
+                  <h3>Capture</h3>
                   <p id="hostSubtitle">No capture yet</p>
                 </div>
                 <div class="stage-actions">
@@ -231,13 +183,7 @@
               </div>
               <div class="video-shell">
                 <video id="localVideo" autoplay muted playsinline></video>
-                <div id="hostEmpty" class="empty-state">
-                  <div class="empty-card">
-                    <span class="empty-icon">↑</span>
-                    <h3>No capture yet</h3>
-                    <p>Start hosting, then choose the display or window you want to stream.</p>
-                  </div>
-                </div>
+                <div id="hostEmpty" class="empty-state"><div><h3>No capture yet</h3><p>Start hosting and select a screen or window.</p></div></div>
               </div>
             </div>
 
@@ -245,7 +191,7 @@
               <div class="stage-header">
                 <div>
                   <span class="eyebrow">Remote stream</span>
-                  <h3>Live host feed</h3>
+                  <h3>Live feed</h3>
                   <p id="guestSubtitle">Waiting for host</p>
                 </div>
                 <div class="stage-actions">
@@ -255,30 +201,16 @@
               </div>
               <div id="remoteStage" class="video-shell focus-shell" tabindex="0">
                 <video id="remoteVideo" autoplay playsinline></video>
-                <div id="guestEmpty" class="empty-state">
-                  <div class="empty-card">
-                    <span class="empty-icon">↓</span>
-                    <h3>No stream yet</h3>
-                    <p>Join a room and wait for the host to approve you.</p>
-                  </div>
-                </div>
-                <div id="inputOverlay" class="input-overlay hidden">
-                  <strong>Controls locked</strong>
-                  <span>Escape unlocks</span>
-                </div>
+                <div id="guestEmpty" class="empty-state"><div><h3>No stream yet</h3><p>Join a room and wait for host approval.</p></div></div>
+                <div id="inputOverlay" class="input-overlay hidden"><strong>Controls locked</strong><span>Escape unlocks</span></div>
               </div>
             </div>
 
             <div id="idleStage" class="stage-placeholder">
-              <div class="placeholder-card">
-                <span class="eyebrow">Preview area</span>
-                <h3>Your stream will appear here.</h3>
-                <p>The main play area stays separate from setup so the interface does not feel cramped during a session.</p>
-                <div class="placeholder-grid">
-                  <div><strong>Local</strong><p>Use localhost or local IP.</p></div>
-                  <div><strong>Tunnel</strong><p>ngrok works well for quick testing.</p></div>
-                  <div><strong>VPS</strong><p>Use a public server for the final version.</p></div>
-                </div>
+              <div>
+                <span class="eyebrow">Preview</span>
+                <h3>Your stream appears here.</h3>
+                <p>Choose Host or Join to begin.</p>
               </div>
             </div>
           </section>
@@ -286,9 +218,9 @@
           <section id="debugPanel" class="debug-panel card collapsed">
             <div class="debug-header">
               <div>
-                <span class="eyebrow">Diagnostics</span>
-                <h3>Debug drawer</h3>
-                <p>Open only when you need technical logs.</p>
+                <span class="eyebrow">Debug</span>
+                <h3>Logs</h3>
+                <p>Open only when troubleshooting.</p>
               </div>
               <div class="debug-actions">
                 <button id="debugDrawerToggle" class="secondary-btn small-btn">Open logs</button>
@@ -309,7 +241,7 @@
         <div>
           <span class="eyebrow">Advanced settings</span>
           <h3>Connection settings</h3>
-          <p>Leave these alone unless you are switching between localhost, ngrok, or a real server.</p>
+          <p>Only change this if you are using localhost, ngrok, or a VPS.</p>
         </div>
         <button id="closeSettingsModal" class="text-btn">Close</button>
       </div>
@@ -347,14 +279,14 @@
 
   <div id="toastHost" class="modal hidden">
     <div class="modal-card approval-card">
-      <div class="modal-top simple-modal-head">
+      <div class="modal-top simple-head">
         <div>
-          <span class="eyebrow">Approval required</span>
+          <span class="eyebrow">Approval</span>
           <h3>Guest wants to join</h3>
           <p>Accept only if this is your invited player.</p>
         </div>
       </div>
-      <div class="modal-actions roomy-actions">
+      <div class="modal-actions">
         <button id="acceptGuest" class="primary-btn">Accept</button>
         <button id="rejectGuest" class="secondary-btn">Reject</button>
       </div>
