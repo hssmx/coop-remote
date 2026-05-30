@@ -29,6 +29,7 @@
         <div><span>Signal</span><strong id="signalStatus">Signaling: disconnected</strong></div>
         <div><span>Connection</span><strong id="rtcStatus">WebRTC: idle</strong></div>
         <div><span>Latency</span><strong id="latencyStatus">Latency: -- ms</strong></div>
+        <div><span>Stream</span><strong id="qualityStatus">Quality: --</strong></div>
       </section>
     </aside>
 
@@ -39,7 +40,10 @@
           <h2>Host the game or join a room.</h2>
           <p>Simple setup for remote local co-op. Network settings are hidden unless needed.</p>
         </div>
-        <button id="quickOpenSettings" class="secondary-btn">Settings</button>
+        <div class="topbar-actions">
+          <button id="themeToggle" class="secondary-btn">Dark mode</button>
+          <button id="quickOpenSettings" class="secondary-btn">Settings</button>
+        </div>
       </header>
 
       <section class="workspace">
@@ -77,9 +81,9 @@
             <section class="card compact-card">
               <span class="eyebrow">Tip</span>
               <ul class="bullet-list">
+                <li>For weak internet, start with <strong>Data saver</strong> or <strong>SD</strong>.</li>
                 <li>Use <strong>wss://</strong> for ngrok URLs.</li>
-                <li>Use Settings only when changing server, STUN, or TURN.</li>
-                <li>Use the debug drawer only when something fails.</li>
+                <li>Host should select the exact game window, not the whole desktop when possible.</li>
               </ul>
             </section>
           </div>
@@ -91,6 +95,41 @@
               <span class="eyebrow">Host</span>
               <h3>Share this PC.</h3>
               <p>Start hosting, copy the room code, accept the guest, then enable remote input.</p>
+
+              <div class="stream-setup">
+                <div class="setup-head">
+                  <div>
+                    <span class="eyebrow">Stream source</span>
+                    <p>Choose the exact app/window to stream.</p>
+                  </div>
+                  <button id="refreshSources" class="secondary-btn small-btn">Refresh</button>
+                </div>
+
+                <label>
+                  <span>App or screen</span>
+                  <select id="captureSource"></select>
+                </label>
+
+                <label>
+                  <span>Stream quality</span>
+                  <select id="qualityPreset">
+                    <option value="data">Data saver · 360p / 15 FPS</option>
+                    <option value="sd">SD · 480p / 24 FPS</option>
+                    <option value="hd">HD · 720p / 30 FPS</option>
+                    <option value="max">Max · 1080p / 60 FPS</option>
+                  </select>
+                </label>
+
+                <label class="switch-card slim-switch">
+                  <input id="streamAudio" type="checkbox" />
+                  <div>
+                    <strong>Stream audio</strong>
+                    <small>Turn off on weak internet if video feels delayed.</small>
+                  </div>
+                </label>
+
+                <p id="qualityDescription" class="hint-text">Data saver is recommended for ngrok, mobile hotspot, or weak Wi-Fi.</p>
+              </div>
 
               <div class="button-row">
                 <button id="startHost" class="primary-btn full">Start hosting</button>
@@ -241,7 +280,7 @@
         <div>
           <span class="eyebrow">Advanced settings</span>
           <h3>Connection settings</h3>
-          <p>Only change this if you are using localhost, ngrok, or a VPS.</p>
+          <p>Only change this if you are using localhost, ngrok, or a VPS. Appearance and stream quality are saved automatically.</p>
         </div>
         <button id="closeSettingsModal" class="text-btn">Close</button>
       </div>

@@ -13,6 +13,20 @@
   --mono: "Cascadia Code", "Consolas", monospace;
 }
 
+[data-theme="dark"] {
+  --bg: #0f172a;
+  --surface: #111827;
+  --surface-2: #1f2937;
+  --text: #f8fafc;
+  --muted: #94a3b8;
+  --line: #334155;
+  --blue: #3b82f6;
+  --blue-soft: rgba(59, 130, 246, 0.18);
+  --green: #34d399;
+  --red: #fb7185;
+  --shadow: 0 18px 45px rgba(0, 0, 0, 0.32);
+}
+
 * { box-sizing: border-box; }
 
 html,
@@ -317,7 +331,8 @@ label {
 }
 
 input[type="text"],
-input[type="password"] {
+input[type="password"],
+select {
   width: 100%;
   padding: 11px 12px;
   border-radius: 12px;
@@ -327,7 +342,8 @@ input[type="password"] {
   outline: none;
 }
 
-input:focus {
+input:focus,
+select:focus {
   border-color: #93c5fd;
   box-shadow: 0 0 0 4px #dbeafe;
 }
@@ -704,4 +720,69 @@ video {
   .split-fields {
     grid-template-columns: 1fr;
   }
+}
+
+
+.topbar-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.stream-setup {
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  border-radius: 16px;
+  padding: 14px;
+  display: grid;
+  gap: 12px;
+}
+
+.setup-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.setup-head p,
+.hint-text {
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.slim-switch {
+  margin-top: 0;
+}
+
+select {
+  background: var(--surface);
+  color: var(--text);
+}
+
+[data-theme="dark"] .hero-card {
+  border-color: #1d4ed8;
+  background: linear-gradient(180deg, #111827, #172033);
+}
+
+[data-theme="dark"] input[type="text"],
+[data-theme="dark"] input[type="password"],
+[data-theme="dark"] select {
+  background: #0b1220;
+  color: var(--text);
+}
+
+[data-theme="dark"] .secondary-btn {
+  background: #0b1220;
+  color: var(--text);
+}
+
+[data-theme="dark"] .room-code,
+[data-theme="dark"] .mode-card {
+  background: #0b1220;
+}
+
+[data-theme="dark"] .bullet-list {
+  color: #cbd5e1;
 }

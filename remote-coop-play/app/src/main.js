@@ -23,7 +23,7 @@ function createWindow() {
     minWidth: 1080,
     minHeight: 740,
     title: "Remote Coop Play",
-    backgroundColor: "#0B0E13",
+    backgroundColor: "#F5F7FB",
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
@@ -102,6 +102,24 @@ ipcMain.handle("input:status", async () => {
   const status = inputInjector.status();
   emitDebug({ level: "info", message: "Input status requested", data: status });
   return status;
+});
+
+ipcMain.handle("capture:list-sources", async () => {
+  const sources = await desktopCapturer.getSources({
+    types: ["screen", "window"],
+    thumbnailSize: { width: 320, height: 180 },
+    fetchWindowIcons: true
+  });
+
+  const mapped = sources.map((source) => ({
+    id: source.id,
+    name: source.name,
+    type: source.id.startsWith("screen:") ? "screen" : "window",
+    thumbnail: source.thumbnail && !source.thumbnail.isEmpty() ? source.thumbnail.toDataURL() : null
+  }));
+
+  emitDebug({ level: "info", message: "Capture sources listed", data: { count: mapped.length } });
+  return mapped;
 });
 
 ipcMain.handle("app:open-external", async (_event, url) => {

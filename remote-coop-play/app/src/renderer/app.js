@@ -9,6 +9,7 @@ const ui = {
   guestNav: $("#guestNav"),
   settingsNav: $("#settingsNav"),
   quickOpenSettings: $("#quickOpenSettings"),
+  themeToggle: $("#themeToggle"),
   settingsModal: $("#settingsModal"),
   closeSettingsModal: $("#closeSettingsModal"),
   debugPanel: $("#debugPanel"),
@@ -29,6 +30,12 @@ const ui = {
   signalStatus: $("#signalStatus"),
   rtcStatus: $("#rtcStatus"),
   latencyStatus: $("#latencyStatus"),
+  qualityStatus: $("#qualityStatus"),
+  captureSource: $("#captureSource"),
+  refreshSources: $("#refreshSources"),
+  qualityPreset: $("#qualityPreset"),
+  streamAudio: $("#streamAudio"),
+  qualityDescription: $("#qualityDescription"),
   startHost: $("#startHost"),
   stopHost: $("#stopHost"),
   roomCode: $("#roomCode"),
@@ -63,7 +70,11 @@ const DEFAULT_SETTINGS = {
   stunUrl: "stun:stun.l.google.com:19302",
   turnUrl: "",
   turnUsername: "",
-  turnPassword: ""
+  turnPassword: "",
+  qualityPreset: "data",
+  streamAudio: true,
+  captureSourceId: "",
+  theme: "light"
 };
 
 const ALLOWED_CODES = new Set([
@@ -71,6 +82,41 @@ const ALLOWED_CODES = new Set([
   "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight",
   "Space", "Enter", "ShiftLeft", "ShiftRight", "ControlLeft", "ControlRight"
 ]);
+
+const QUALITY_PRESETS = {
+  data: {
+    label: "Data saver",
+    width: 640,
+    height: 360,
+    fps: 15,
+    bitrate: 350_000,
+    description: "Best for ngrok, mobile hotspot, weak Wi-Fi, or long-distance sessions. Lowest delay."
+  },
+  sd: {
+    label: "SD",
+    width: 854,
+    height: 480,
+    fps: 24,
+    bitrate: 700_000,
+    description: "Good balance for weak internet. Recommended for most tests with friends."
+  },
+  hd: {
+    label: "HD",
+    width: 1280,
+    height: 720,
+    fps: 30,
+    bitrate: 1_600_000,
+    description: "Clearer image, but needs stable upload. Use when both players have decent internet."
+  },
+  max: {
+    label: "Max",
+    width: 1920,
+    height: 1080,
+    fps: 60,
+    bitrate: 4_500_000,
+    description: "Best quality. Use only on strong internet or local network."
+  }
+};
 
 const state = {
   role: null,
@@ -88,6 +134,10 @@ const state = {
   pingTimer: null,
   statsTimer: null,
   settings: { ...DEFAULT_SETTINGS },
+  captureSources: [],
+  statsSnapshot: new Map(),
+  currentOutboundBitrate: null,
+  currentInboundBitrate: null,
   logs: []
 };
 
@@ -123,6 +173,44 @@ function setDebugCollapsed(collapsed) {
   if (!ui.debugPanel || !ui.debugDrawerToggle) return;
   ui.debugPanel.classList.toggle("collapsed", collapsed);
   ui.debugDrawerToggle.textContent = collapsed ? "Open logs" : "Hide logs";
+}
+
+function applyTheme(theme) {
+  const safeTheme = theme === "dark" ? "dark" : "light";
+  document.documentElement.dataset.theme = safeTheme;
+  if (ui.themeToggle) ui.themeToggle.textContent = safeTheme === "dark" ? "Light mode" : "Dark mode";
+}
+
+function toggleTheme() {
+  state.settings.theme = state.settings.theme === "dark" ? "light" : "dark";
+  localStorage.setItem("remoteCoopSettings", JSON.stringify(state.settings));
+  applyTheme(state.settings.theme);
+  log("info", `Theme changed to ${state.settings.theme}`);
+}
+
+function getQualityPreset() {
+  return QUALITY_PRESETS[state.settings.qualityPreset] || QUALITY_PRESETS.data;
+}
+
+function formatBitrate(bps) {
+  if (!Number.isFinite(bps)) return "--";
+  if (bps >= 1_000_000) return `${(bps / 1_000_000).toFixed(2)} Mbps`;
+  return `${Math.round(bps / 1000)} kbps`;
+}
+
+function updateQualityStatus(extra = "") {
+  const preset = getQualityPreset();
+  const bitrate = state.role === "guest" ? state.currentInboundBitrate : state.currentOutboundBitrate;
+  const bitrateText = Number.isFinite(bitrate) ? ` · ${formatBitrate(bitrate)}` : "";
+  if (ui.qualityStatus) ui.qualityStatus.textContent = `Quality: ${preset.label}${bitrateText}${extra}`;
+}
+
+function updateQualityDescription() {
+  const preset = getQualityPreset();
+  if (ui.qualityDescription) {
+    ui.qualityDescription.textContent = `${preset.label}: ${preset.width}×${preset.height}, ${preset.fps} FPS, target ${formatBitrate(preset.bitrate)}. ${preset.description}`;
+  }
+  updateQualityStatus();
 }
 
 function openSettingsModal() {
@@ -166,20 +254,48 @@ function loadSettings() {
   ui.turnUrl.value = state.settings.turnUrl;
   ui.turnUsername.value = state.settings.turnUsername;
   ui.turnPassword.value = state.settings.turnPassword;
-  log("info", "Settings loaded", { serverUrl: state.settings.serverUrl, stunUrl: state.settings.stunUrl, hasTurn: Boolean(state.settings.turnUrl) });
+
+  if (ui.qualityPreset) ui.qualityPreset.value = state.settings.qualityPreset || DEFAULT_SETTINGS.qualityPreset;
+  if (ui.streamAudio) ui.streamAudio.checked = Boolean(state.settings.streamAudio);
+
+  applyTheme(state.settings.theme);
+  updateQualityDescription();
+
+  log("info", "Settings loaded", {
+    serverUrl: state.settings.serverUrl,
+    stunUrl: state.settings.stunUrl,
+    hasTurn: Boolean(state.settings.turnUrl),
+    quality: state.settings.qualityPreset,
+    streamAudio: state.settings.streamAudio,
+    theme: state.settings.theme
+  });
 }
 
 function saveSettings() {
   state.settings = {
+    ...state.settings,
     serverUrl: ui.serverUrl.value.trim() || DEFAULT_SETTINGS.serverUrl,
     stunUrl: ui.stunUrl.value.trim() || DEFAULT_SETTINGS.stunUrl,
     turnUrl: ui.turnUrl.value.trim(),
     turnUsername: ui.turnUsername.value.trim(),
-    turnPassword: ui.turnPassword.value
+    turnPassword: ui.turnPassword.value,
+    qualityPreset: ui.qualityPreset ? ui.qualityPreset.value : state.settings.qualityPreset,
+    streamAudio: ui.streamAudio ? ui.streamAudio.checked : state.settings.streamAudio,
+    captureSourceId: ui.captureSource ? ui.captureSource.value : state.settings.captureSourceId,
+    theme: state.settings.theme || DEFAULT_SETTINGS.theme
   };
 
   localStorage.setItem("remoteCoopSettings", JSON.stringify(state.settings));
-  log("info", "Settings saved", { serverUrl: state.settings.serverUrl, stunUrl: state.settings.stunUrl, hasTurn: Boolean(state.settings.turnUrl) });
+  updateQualityDescription();
+
+  log("info", "Settings saved", {
+    serverUrl: state.settings.serverUrl,
+    stunUrl: state.settings.stunUrl,
+    hasTurn: Boolean(state.settings.turnUrl),
+    quality: state.settings.qualityPreset,
+    streamAudio: state.settings.streamAudio,
+    captureSourceId: state.settings.captureSourceId
+  });
   showToast("Settings saved.");
 }
 
@@ -300,20 +416,180 @@ async function handleServerMessage(msg) {
   }
 }
 
-async function startCapture() {
-  log("info", "Opening screen picker");
+
+async function loadCaptureSources() {
+  if (!ui.captureSource) return;
+
+  const previous = state.settings.captureSourceId || ui.captureSource.value;
+  ui.captureSource.innerHTML = "";
+
+  const pickerOption = document.createElement("option");
+  pickerOption.value = "__picker";
+  pickerOption.textContent = "Use system picker";
+  ui.captureSource.appendChild(pickerOption);
+
+  try {
+    const sources = await window.remoteCoop.listCaptureSources();
+    state.captureSources = sources || [];
+
+    for (const source of state.captureSources) {
+      const option = document.createElement("option");
+      option.value = source.id;
+      option.textContent = `${source.type === "screen" ? "Screen" : "Window"} · ${source.name}`;
+      ui.captureSource.appendChild(option);
+    }
+
+    const hasPrevious = Array.from(ui.captureSource.options).some((option) => option.value === previous);
+    ui.captureSource.value = hasPrevious ? previous : (state.captureSources[0]?.id || "__picker");
+    state.settings.captureSourceId = ui.captureSource.value;
+
+    log("info", "Capture sources refreshed", {
+      count: state.captureSources.length,
+      selected: ui.captureSource.options[ui.captureSource.selectedIndex]?.textContent
+    });
+  } catch (error) {
+    ui.captureSource.value = "__picker";
+    log("error", "Could not list capture sources", { error: error.message });
+    showToast("Could not list apps. Using system picker.");
+  }
+}
+
+function buildDesktopConstraints(sourceId, withAudio) {
+  const preset = getQualityPreset();
+
+  const video = {
+    mandatory: {
+      chromeMediaSource: "desktop",
+      chromeMediaSourceId: sourceId,
+      minWidth: 320,
+      maxWidth: preset.width,
+      minHeight: 180,
+      maxHeight: preset.height,
+      maxFrameRate: preset.fps
+    }
+  };
+
+  const audio = withAudio
+    ? { mandatory: { chromeMediaSource: "desktop" } }
+    : false;
+
+  return { audio, video };
+}
+
+async function captureExplicitSource(sourceId) {
+  const withAudio = Boolean(state.settings.streamAudio);
+
+  try {
+    return await navigator.mediaDevices.getUserMedia(buildDesktopConstraints(sourceId, withAudio));
+  } catch (error) {
+    if (withAudio) {
+      log("warn", "Capture with audio failed, retrying video only", { error: error.message });
+      showToast("Audio capture failed. Streaming video only.", 5000);
+      return await navigator.mediaDevices.getUserMedia(buildDesktopConstraints(sourceId, false));
+    }
+    throw error;
+  }
+}
+
+async function captureWithSystemPicker() {
+  const preset = getQualityPreset();
   const stream = await navigator.mediaDevices.getDisplayMedia({
-    video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 60, max: 60 } },
-    audio: true
+    video: {
+      width: { ideal: preset.width, max: preset.width },
+      height: { ideal: preset.height, max: preset.height },
+      frameRate: { ideal: preset.fps, max: preset.fps }
+    },
+    audio: Boolean(state.settings.streamAudio)
   });
+  return stream;
+}
+
+async function applyQualityToSenders(senders = []) {
+  const preset = getQualityPreset();
+
+  for (const sender of senders) {
+    if (!sender || !sender.track || sender.track.kind !== "video") continue;
+
+    try {
+      const params = sender.getParameters();
+      if (!params.encodings || !params.encodings.length) params.encodings = [{}];
+
+      params.encodings[0].maxBitrate = preset.bitrate;
+      params.encodings[0].maxFramerate = preset.fps;
+      params.degradationPreference = "maintain-framerate";
+
+      await sender.setParameters(params);
+      log("info", "Applied video sender quality", {
+        preset: preset.label,
+        maxBitrate: preset.bitrate,
+        fps: preset.fps
+      });
+    } catch (error) {
+      log("warn", "Could not apply sender quality", { error: error.message });
+    }
+  }
+
+  updateQualityStatus();
+}
+
+async function updateActiveQuality() {
+  saveSettings();
+
+  if (state.pc) {
+    await applyQualityToSenders(state.pc.getSenders());
+    showToast("Quality updated for the active connection.");
+  } else {
+    showToast("Quality saved. It will apply when hosting starts.");
+  }
+}
+
+
+async function startCapture() {
+  if (ui.captureSource && ui.captureSource.options.length === 0) {
+    await loadCaptureSources();
+  }
+
+  saveSettings();
+
+  const preset = getQualityPreset();
+  const sourceId = ui.captureSource ? ui.captureSource.value : "__picker";
+  const sourceLabel = ui.captureSource && ui.captureSource.selectedIndex >= 0
+    ? ui.captureSource.options[ui.captureSource.selectedIndex].textContent
+    : "System picker";
+
+  log("info", "Starting capture", {
+    source: sourceLabel,
+    sourceId,
+    quality: preset.label,
+    width: preset.width,
+    height: preset.height,
+    fps: preset.fps,
+    bitrate: preset.bitrate,
+    audio: state.settings.streamAudio
+  });
+
+  const stream = sourceId && sourceId !== "__picker"
+    ? await captureExplicitSource(sourceId)
+    : await captureWithSystemPicker();
+
+  const videoTrack = stream.getVideoTracks()[0];
+  if (videoTrack) {
+    videoTrack.contentHint = "motion";
+  }
 
   state.localStream = stream;
   ui.localVideo.srcObject = stream;
   ui.hostEmpty.classList.add("hidden");
-  ui.hostSubtitle.textContent = "Screen capture active";
+  ui.hostSubtitle.textContent = `Streaming ${sourceLabel} · ${preset.label}`;
   ui.hostLiveDot.textContent = "live";
   ui.hostLiveDot.classList.add("live");
-  log("info", "Capture active", stream.getTracks().map((track) => ({ kind: track.kind, label: track.label })));
+  updateQualityStatus();
+
+  log("info", "Capture active", stream.getTracks().map((track) => ({
+    kind: track.kind,
+    label: track.label,
+    settings: typeof track.getSettings === "function" ? track.getSettings() : {}
+  })));
 
   for (const track of stream.getTracks()) {
     track.addEventListener("ended", () => {
@@ -362,7 +638,9 @@ async function startHostPeer() {
   if (!state.localStream) { showToast("Start screen capture first."); return; }
   await closePeer();
   const pc = await createPeerConnection();
-  for (const track of state.localStream.getTracks()) pc.addTrack(track, state.localStream);
+  const senders = [];
+  for (const track of state.localStream.getTracks()) senders.push(pc.addTrack(track, state.localStream));
+  await applyQualityToSenders(senders);
   const dc = pc.createDataChannel("input", { ordered: false, maxRetransmits: 0 });
   setupHostDataChannel(dc);
   const offer = await pc.createOffer({ offerToReceiveAudio: false, offerToReceiveVideo: false });
@@ -547,16 +825,58 @@ function stopPing() { if (state.pingTimer) clearInterval(state.pingTimer); state
 
 function startStats() {
   stopStats();
+  state.statsSnapshot = new Map();
+
   state.statsTimer = setInterval(async () => {
     if (!state.pc) return;
+
     try {
       const stats = await state.pc.getStats();
+      let rttMs = null;
+      let selectedVideoReport = null;
+
       stats.forEach((report) => {
         if (report.type === "candidate-pair" && report.state === "succeeded" && report.nominated && typeof report.currentRoundTripTime === "number") {
-          if (state.role === "host") ui.latencyStatus.textContent = `Network RTT: ${Math.round(report.currentRoundTripTime * 1000)} ms`;
+          rttMs = Math.round(report.currentRoundTripTime * 1000);
+        }
+
+        if (state.role === "host" && report.type === "outbound-rtp" && report.kind === "video" && !report.isRemote) {
+          selectedVideoReport = report;
+        }
+
+        if (state.role === "guest" && report.type === "inbound-rtp" && report.kind === "video" && !report.isRemote) {
+          selectedVideoReport = report;
         }
       });
-    } catch {}
+
+      if (typeof rttMs === "number") {
+        ui.latencyStatus.textContent = `Network RTT: ${rttMs} ms`;
+      }
+
+      if (selectedVideoReport) {
+        const key = selectedVideoReport.id;
+        const previous = state.statsSnapshot.get(key);
+        const bytes = selectedVideoReport.bytesSent ?? selectedVideoReport.bytesReceived;
+        const timestampMs = selectedVideoReport.timestamp;
+
+        if (previous && typeof bytes === "number") {
+          const deltaBytes = bytes - previous.bytes;
+          const deltaMs = timestampMs - previous.timestampMs;
+          if (deltaBytes >= 0 && deltaMs > 0) {
+            const bitrate = (deltaBytes * 8 * 1000) / deltaMs;
+            if (state.role === "host") state.currentOutboundBitrate = bitrate;
+            if (state.role === "guest") state.currentInboundBitrate = bitrate;
+            updateQualityStatus();
+          }
+        }
+
+        if (typeof bytes === "number") {
+          state.statsSnapshot.set(key, { bytes, timestampMs });
+        }
+      }
+    } catch (error) {
+      log("warn", "Could not read WebRTC stats", { error: error.message });
+    }
   }, 1500);
 }
 function stopStats() { if (state.statsTimer) clearInterval(state.statsTimer); state.statsTimer = null; }
@@ -580,6 +900,8 @@ async function resetHost(sendLeave = true) {
   state.roomCode = null; state.pendingGuestPeerId = null;
   ui.roomCode.textContent = "------"; ui.startHost.disabled = false; ui.stopHost.disabled = true; ui.remoteInputToggle.checked = false; ui.toastHost.classList.add("hidden");
   ui.hostEmpty.classList.remove("hidden"); ui.hostSubtitle.textContent = "No capture yet"; ui.hostLiveDot.textContent = "idle"; ui.hostLiveDot.classList.remove("live");
+  state.currentOutboundBitrate = null;
+  updateQualityStatus();
   log("info", "Host reset");
 }
 
@@ -587,6 +909,8 @@ async function resetGuest(sendLeave = true) {
   if (sendLeave && state.ws && state.ws.readyState === WebSocket.OPEN && state.roomCode) sendWs({ type: "leave-room", roomCode: state.roomCode });
   await closePeer(); state.roomCode = null; state.guestAccepted = false; state.remoteStream = null;
   ui.remoteVideo.srcObject = null; ui.guestEmpty.classList.remove("hidden"); ui.guestSubtitle.textContent = "Waiting for host"; ui.guestLiveDot.textContent = "idle"; ui.guestLiveDot.classList.remove("live");
+  state.currentInboundBitrate = null;
+  updateQualityStatus();
   ui.joinRoom.disabled = false; ui.leaveGuest.disabled = true; unlockGuestInput();
   log("info", "Guest reset");
 }
@@ -633,13 +957,14 @@ document.addEventListener("fullscreenchange", () => {
 });
 
 function bindEvents() {
-  ui.chooseHost.addEventListener("click", () => { state.role = "host"; showScreen("host"); log("info", "Selected host mode"); });
+  ui.chooseHost.addEventListener("click", () => { state.role = "host"; showScreen("host"); loadCaptureSources(); log("info", "Selected host mode"); });
   ui.chooseGuest.addEventListener("click", () => { state.role = "guest"; showScreen("guest"); log("info", "Selected guest mode"); });
   ui.homeNav.addEventListener("click", goBack);
-  ui.hostNav.addEventListener("click", () => { state.role = "host"; showScreen("host"); log("info", "Opened host screen from navigation"); });
+  ui.hostNav.addEventListener("click", () => { state.role = "host"; showScreen("host"); loadCaptureSources(); log("info", "Opened host screen from navigation"); });
   ui.guestNav.addEventListener("click", () => { state.role = "guest"; showScreen("guest"); log("info", "Opened guest screen from navigation"); });
   ui.settingsNav.addEventListener("click", openSettingsModal);
   ui.quickOpenSettings.addEventListener("click", openSettingsModal);
+  ui.themeToggle.addEventListener("click", toggleTheme);
   ui.closeSettingsModal.addEventListener("click", closeSettingsModal);
   ui.settingsModal.addEventListener("click", (event) => { if (event.target === ui.settingsModal) closeSettingsModal(); });
   ui.debugDrawerToggle.addEventListener("click", () => setDebugCollapsed(!ui.debugPanel.classList.contains("collapsed")));
@@ -648,6 +973,10 @@ function bindEvents() {
   });
   document.querySelectorAll("[data-back]").forEach((btn) => btn.addEventListener("click", goBack));
   ui.saveSettings.addEventListener("click", () => { saveSettings(); closeSettingsModal(); });
+  ui.refreshSources.addEventListener("click", loadCaptureSources);
+  ui.captureSource.addEventListener("change", () => { state.settings.captureSourceId = ui.captureSource.value; saveSettings(); });
+  ui.qualityPreset.addEventListener("change", updateActiveQuality);
+  ui.streamAudio.addEventListener("change", () => { saveSettings(); showToast("Audio setting saved. Restart hosting to apply capture audio changes."); });
 
   ui.hostFullscreen.addEventListener("click", () => toggleFullscreen(ui.hostVideoWrap, "host preview"));
   ui.guestFullscreen.addEventListener("click", () => toggleFullscreen(ui.remoteStage, "guest stream"));
@@ -690,4 +1019,5 @@ setDebugCollapsed(true);
 updateSignalStatus("disconnected");
 updateRtcStatus("idle");
 setLatency(null);
+updateQualityStatus();
 log("info", "App ready");
