@@ -1,18 +1,40 @@
-appId: com.ensamprompters.remotecoopplay
+appId: com.remotecoop.play
 productName: Remote Coop Play
+
 directories:
   output: dist
+  buildResources: assets
+
 files:
   - src/**/*
   - assets/**/*
   - package.json
+
 asar: true
+
 asarUnpack:
-  - src/native/**
+  - src/native/**/*
+
+extraResources:
+  - from: src/native/windows-key-helper.ps1
+    to: src/native/windows-key-helper.ps1
+
 win:
   target:
-    - portable
-    - nsis
+    - target: nsis
+      arch:
+        - x64
+    - target: zip
+      arch:
+        - x64
+  artifactName: Remote-Coop-Play-${version}-${arch}.${ext}
+  requestedExecutionLevel: asInvoker
+
 nsis:
   oneClick: false
+  perMachine: false
   allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Remote Coop Play
+  uninstallDisplayName: Remote Coop Play

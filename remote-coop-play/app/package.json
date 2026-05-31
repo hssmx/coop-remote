@@ -7,7 +7,9 @@
   "type": "commonjs",
   "scripts": {
     "dev": "electron .",
-    "dist:win": "electron-builder --win portable nsis"
+    "dist:win": "electron-builder --win portable nsis",
+    "build:win": "electron-builder --win",
+    "dist": "electron-builder"
   },
   "dependencies": {},
   "devDependencies": {
