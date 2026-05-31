@@ -140,6 +140,24 @@ function createInputInjector(onLog = () => {}) {
   }
 
   function handleRemoteInput(payload) {
+    if (payload && payload.type === "mouse") {
+      if (!enabled) {
+        return { ok: false, ignored: true, reason: "Remote input disabled by host.", payload };
+      }
+
+      const safe = {
+        type: "mouse",
+        action: String(payload.action || ""),
+        xRatio: Number(payload.xRatio || 0),
+        yRatio: Number(payload.yRatio || 0),
+        button: String(payload.button || "left"),
+        deltaY: Number(payload.deltaY || 0)
+      };
+
+      const result = sendToHelper(safe);
+      return { ...result, payload: safe, pressed: Array.from(pressed) };
+    }
+
     const normalized = normalizeInput(payload);
     if (!normalized) {
       return { ok: false, ignored: true, reason: "Key not allowed.", payload };

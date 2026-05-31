@@ -9,327 +9,349 @@
 </head>
 <body>
   <div class="app-frame">
-    <aside class="sidebar">
-      <div class="brand-block">
+    <aside id="sidebar" class="sidebar">
+      <div class="brand-row">
         <div class="brand-mark">R</div>
         <div>
           <h1>Remote Coop Play</h1>
-          <p>Local co-op, online.</p>
+          <p>Weak-internet co-op</p>
         </div>
       </div>
 
-      <nav class="main-nav">
-        <button id="homeNav" class="nav-btn active"><span>Home</span><small>Start here</small></button>
-        <button id="hostNav" class="nav-btn"><span>Host</span><small>Run the game</small></button>
-        <button id="guestNav" class="nav-btn"><span>Join</span><small>Play remotely</small></button>
-        <button id="settingsNav" class="nav-btn muted"><span>Settings</span><small>Advanced</small></button>
+      <nav class="nav-list">
+        <button class="nav-btn active" data-screen="home">Home</button>
+        <button class="nav-btn" data-screen="host">Host</button>
+        <button class="nav-btn" data-screen="join">Join</button>
+        <button class="nav-btn" data-screen="party">Party</button>
+        <button class="nav-btn" data-screen="network">Network</button>
+        <button class="nav-btn" data-screen="settings">Settings</button>
       </nav>
 
-      <section class="status-stack">
-        <div><span>Signal</span><strong id="signalStatus">Signaling: disconnected</strong></div>
-        <div><span>Connection</span><strong id="rtcStatus">WebRTC: idle</strong></div>
-        <div><span>Latency</span><strong id="latencyStatus">Latency: -- ms</strong></div>
-        <div><span>Stream</span><strong id="qualityStatus">Quality: --</strong></div>
-      </section>
+      <button id="collapseSidebar" class="secondary-btn full">Hide menu</button>
     </aside>
 
     <main class="main-shell">
       <header class="topbar">
-        <div>
-          <span class="eyebrow">Ready</span>
-          <h2>Host the game or join a room.</h2>
-          <p>Simple setup for remote local co-op. Network settings are hidden unless needed.</p>
+        <div class="topbar-left">
+          <button id="expandSidebar" class="secondary-btn icon-btn hidden">☰</button>
+          <div>
+            <span class="eyebrow">Room control</span>
+            <h2 id="pageTitle">Remote local co-op, optimized for weak internet.</h2>
+            <p id="pageSubtitle">Start simple. Open advanced panels only when needed.</p>
+          </div>
         </div>
+
         <div class="topbar-actions">
+          <span id="serverPingBadge" class="mini-badge">Server -- ms</span>
+          <span id="peerPingBadge" class="mini-badge">Peer -- ms</span>
           <button id="themeToggle" class="secondary-btn">Dark mode</button>
-          <button id="quickOpenSettings" class="secondary-btn">Settings</button>
         </div>
       </header>
 
       <section class="workspace">
-        <section class="task-panel">
-          <div id="roleScreen" class="panel-screen">
-            <section class="card hero-card">
-              <span class="eyebrow">Choose mode</span>
-              <h3>What is this computer doing?</h3>
-              <p>Use Host on the PC running the game. Use Join on the second player's PC.</p>
+        <section class="control-column">
+          <section id="homeScreen" class="screen">
+            <div class="card hero-card">
+              <span class="eyebrow">Start</span>
+              <h3>Choose a role.</h3>
+              <p>The host runs the game. Guests connect, receive the stream, and send only the controls allowed by the host.</p>
 
-              <div class="mode-grid">
-                <article class="mode-card">
-                  <h4>Host</h4>
-                  <p>Create a room and share the game screen.</p>
-                  <button id="chooseHost" class="primary-btn full">Host a game</button>
-                </article>
-
-                <article class="mode-card">
-                  <h4>Join</h4>
-                  <p>Enter the room code and play remotely.</p>
-                  <button id="chooseGuest" class="secondary-btn full">Join a room</button>
-                </article>
+              <div class="choice-grid">
+                <button id="homeHost" class="choice-card">
+                  <strong>Host a game</strong>
+                  <span>Create a room and stream an app/window.</span>
+                </button>
+                <button id="homeJoin" class="choice-card">
+                  <strong>Join a room</strong>
+                  <span>Enter a room code and wait for approval.</span>
+                </button>
               </div>
-            </section>
+            </div>
 
-            <section class="card">
-              <span class="eyebrow">How it works</span>
-              <div class="steps">
-                <div><strong>1</strong><p>Host starts the room and copies the code.</p></div>
-                <div><strong>2</strong><p>Guest enters the code and waits for approval.</p></div>
-                <div><strong>3</strong><p>Host enables input, guest locks controls, then you play.</p></div>
-              </div>
-            </section>
-
-            <section class="card compact-card">
-              <span class="eyebrow">Tip</span>
-              <ul class="bullet-list">
-                <li>For weak internet, start with <strong>Data saver</strong> or <strong>SD</strong>.</li>
-                <li>Use <strong>wss://</strong> for ngrok URLs.</li>
-                <li>Host should select the exact game window, not the whole desktop when possible.</li>
+            <div class="card">
+              <span class="eyebrow">Weak internet plan</span>
+              <ul class="soft-list">
+                <li>Use 360p or 480p first.</li>
+                <li>Lower FPS before lowering image too much.</li>
+                <li>Disable cameras first, then mic, then game audio.</li>
+                <li>Use TURN for 4G/hotspot users.</li>
               </ul>
-            </section>
-          </div>
+            </div>
+          </section>
 
-          <div id="hostScreen" class="panel-screen hidden">
-            <button class="text-btn" data-back>← Back</button>
-
-            <section class="card stack">
+          <section id="hostScreen" class="screen hidden">
+            <div class="card stack">
               <span class="eyebrow">Host</span>
-              <h3>Share this PC.</h3>
-              <p>Start hosting, copy the room code, accept the guest, then enable remote input.</p>
+              <h3>Stream source</h3>
+              <p>Choose exactly what to stream. A game window is better than the full desktop.</p>
 
-              <div class="stream-setup">
-                <div class="setup-head">
-                  <div>
-                    <span class="eyebrow">Stream source</span>
-                    <p>Choose the exact app/window to stream.</p>
-                  </div>
-                  <button id="refreshSources" class="secondary-btn small-btn">Refresh</button>
-                </div>
-
+              <div class="split-row">
                 <label>
-                  <span>App or screen</span>
-                  <select id="captureSource"></select>
+                  <span>Your name</span>
+                  <input id="hostName" type="text" value="Host" />
                 </label>
-
                 <label>
-                  <span>Stream quality</span>
-                  <select id="qualityPreset">
-                    <option value="data">Data saver · 360p / 15 FPS</option>
-                    <option value="sd">SD · 480p / 24 FPS</option>
-                    <option value="hd">HD · 720p / 30 FPS</option>
-                    <option value="max">Max · 1080p / 60 FPS</option>
-                  </select>
+                  <span>Max people</span>
+                  <input id="maxPeople" type="number" min="2" max="8" value="2" />
                 </label>
-
-                <label class="switch-card slim-switch">
-                  <input id="streamAudio" type="checkbox" />
-                  <div>
-                    <strong>Stream audio</strong>
-                    <small>Turn off on weak internet if video feels delayed.</small>
-                  </div>
-                </label>
-
-                <p id="qualityDescription" class="hint-text">Data saver is recommended for ngrok, mobile hotspot, or weak Wi-Fi.</p>
               </div>
 
-              <div class="button-row">
-                <button id="startHost" class="primary-btn full">Start hosting</button>
-                <button id="stopHost" class="danger-btn full" disabled>Stop</button>
-              </div>
-
-              <div class="room-card">
-                <div class="room-head">
-                  <div>
-                    <span class="eyebrow">Room code</span>
-                    <p>Send this code to the guest.</p>
-                  </div>
-                  <button id="copyRoom" class="secondary-btn small-btn">Copy</button>
-                </div>
-                <div id="roomCode" class="room-code">------</div>
-              </div>
-
-              <label class="switch-card">
-                <input id="remoteInputToggle" type="checkbox" />
-                <div>
-                  <strong>Remote input</strong>
-                  <small>Allows the guest to send game keys to the focused host window.</small>
-                </div>
+              <label>
+                <span>App/window/screen</span>
+                <select id="captureSource"></select>
               </label>
 
-              <button id="testLocalInput" class="secondary-btn full">Test keyboard input</button>
-            </section>
+              <div class="button-row">
+                <button id="refreshSources" class="secondary-btn">Refresh apps</button>
+                <button id="startHost" class="primary-btn">Start hosting</button>
+                <button id="stopHost" class="danger-btn" disabled>Stop</button>
+              </div>
 
-            <section class="card compact-card">
-              <span class="eyebrow">Checklist</span>
-              <ul class="bullet-list">
-                <li>Accept the guest request.</li>
-                <li>Click the game/browser window before playing.</li>
-                <li>Run this app as administrator if the game is also administrator.</li>
-              </ul>
-            </section>
-          </div>
+              <div id="roomBox" class="room-box hidden">
+                <div>
+                  <span class="eyebrow">Room code</span>
+                  <strong id="roomCode">------</strong>
+                </div>
+                <button id="copyRoom" class="secondary-btn">Copy</button>
+              </div>
 
-          <div id="guestScreen" class="panel-screen hidden">
-            <button class="text-btn" data-back>← Back</button>
+              <label class="switch-row">
+                <input id="allowJoins" type="checkbox" checked />
+                <span><strong>Allow new joins</strong><small>Host can change this after starting.</small></span>
+              </label>
+            </div>
 
-            <section class="card stack">
+            <div class="card stack">
+              <span class="eyebrow">Pending requests</span>
+              <div id="pendingList" class="member-list empty-list">No pending requests.</div>
+            </div>
+          </section>
+
+          <section id="joinScreen" class="screen hidden">
+            <div class="card stack">
               <span class="eyebrow">Join</span>
-              <h3>Connect to a host.</h3>
-              <p>Enter the room code, wait for approval, then lock controls.</p>
+              <h3>Enter room code</h3>
+              <p>The host must approve you before you receive the stream.</p>
+
+              <label>
+                <span>Your name</span>
+                <input id="guestName" type="text" value="Player" />
+              </label>
 
               <label>
                 <span>Room code</span>
-                <input id="joinCode" type="text" maxlength="6" placeholder="ABC123" spellcheck="false" />
+                <input id="joinCode" type="text" maxlength="6" placeholder="ABC123" />
               </label>
 
               <div class="button-row">
-                <button id="joinRoom" class="primary-btn full">Join room</button>
-                <button id="leaveGuest" class="danger-btn full" disabled>Leave</button>
-              </div>
-
-              <label class="switch-card">
-                <input id="guestInputLock" type="checkbox" />
-                <div>
-                  <strong>Lock controls</strong>
-                  <small>Send allowed keys to the host. Press Escape to unlock.</small>
-                </div>
-              </label>
-            </section>
-
-            <section class="card compact-card">
-              <span class="eyebrow">Allowed keys</span>
-              <div class="key-grid">
-                <span>W</span><span>A</span><span>S</span><span>D</span>
-                <span>↑</span><span>↓</span><span>←</span><span>→</span>
-                <span>Space</span><span>Enter</span><span>Shift</span><span>Ctrl</span>
-              </div>
-            </section>
-          </div>
-        </section>
-
-        <section class="stream-column">
-          <section class="stage-panel card">
-            <div id="hostVideoWrap" class="stage-card hidden">
-              <div class="stage-header">
-                <div>
-                  <span class="eyebrow">Host preview</span>
-                  <h3>Capture</h3>
-                  <p id="hostSubtitle">No capture yet</p>
-                </div>
-                <div class="stage-actions">
-                  <button id="hostFullscreen" class="secondary-btn small-btn">Fullscreen</button>
-                  <span id="hostLiveDot" class="live-pill">idle</span>
-                </div>
-              </div>
-              <div class="video-shell">
-                <video id="localVideo" autoplay muted playsinline></video>
-                <div id="hostEmpty" class="empty-state"><div><h3>No capture yet</h3><p>Start hosting and select a screen or window.</p></div></div>
-              </div>
-            </div>
-
-            <div id="guestVideoWrap" class="stage-card hidden">
-              <div class="stage-header">
-                <div>
-                  <span class="eyebrow">Remote stream</span>
-                  <h3>Live feed</h3>
-                  <p id="guestSubtitle">Waiting for host</p>
-                </div>
-                <div class="stage-actions">
-                  <button id="guestFullscreen" class="secondary-btn small-btn">Fullscreen</button>
-                  <span id="guestLiveDot" class="live-pill">idle</span>
-                </div>
-              </div>
-              <div id="remoteStage" class="video-shell focus-shell" tabindex="0">
-                <video id="remoteVideo" autoplay playsinline></video>
-                <div id="guestEmpty" class="empty-state"><div><h3>No stream yet</h3><p>Join a room and wait for host approval.</p></div></div>
-                <div id="inputOverlay" class="input-overlay hidden"><strong>Controls locked</strong><span>Escape unlocks</span></div>
-              </div>
-            </div>
-
-            <div id="idleStage" class="stage-placeholder">
-              <div>
-                <span class="eyebrow">Preview</span>
-                <h3>Your stream appears here.</h3>
-                <p>Choose Host or Join to begin.</p>
+                <button id="joinRoom" class="primary-btn">Join room</button>
+                <button id="leaveRoom" class="danger-btn" disabled>Leave</button>
               </div>
             </div>
           </section>
 
-          <section id="debugPanel" class="debug-panel card collapsed">
-            <div class="debug-header">
+          <section id="partyScreen" class="screen hidden">
+            <div class="card stack">
+              <div class="section-head">
+                <div>
+                  <span class="eyebrow">Party</span>
+                  <h3>People and media</h3>
+                  <p>Cameras are optional and should stay low on weak internet.</p>
+                </div>
+              </div>
+
+              <div class="split-row">
+                <label class="switch-row">
+                  <input id="cameraToggle" type="checkbox" />
+                  <span><strong>Camera</strong><small>Low quality by default.</small></span>
+                </label>
+                <label class="switch-row">
+                  <input id="micToggle" type="checkbox" />
+                  <span><strong>Mic</strong><small>Push-to-talk recommended.</small></span>
+                </label>
+              </div>
+
+              <label class="switch-row">
+                <input id="pushToTalk" type="checkbox" checked />
+                <span><strong>Push to talk</strong><small>Hold V to speak. Saves bandwidth and noise.</small></span>
+              </label>
+            </div>
+
+            <div class="card stack">
+              <span class="eyebrow">Members</span>
+              <div id="memberList" class="member-list empty-list">No party yet.</div>
+            </div>
+          </section>
+
+          <section id="networkScreen" class="screen hidden">
+            <div class="card stack">
+              <span class="eyebrow">Live quality controls</span>
+              <h3>Change stream any time</h3>
+              <p>Bitrate changes instantly. Resolution/FPS applies by refreshing the capture without closing the room.</p>
+
+              <div class="split-row">
+                <label>
+                  <span>Resolution</span>
+                  <select id="resolutionSelect">
+                    <option value="426x240">240p</option>
+                    <option value="640x360" selected>360p</option>
+                    <option value="854x480">480p</option>
+                    <option value="1280x720">720p</option>
+                    <option value="1920x1080">1080p</option>
+                  </select>
+                </label>
+
+                <label>
+                  <span>FPS</span>
+                  <select id="fpsSelect">
+                    <option value="10">10</option>
+                    <option value="15" selected>15</option>
+                    <option value="24">24</option>
+                    <option value="30">30</option>
+                    <option value="45">45</option>
+                    <option value="60">60</option>
+                  </select>
+                </label>
+              </div>
+
+              <label>
+                <span>Image quality: <b id="imageQualityLabel">45%</b></span>
+                <input id="imageQuality" type="range" min="15" max="100" value="45" />
+              </label>
+
+              <label>
+                <span>Max bitrate: <b id="bitrateLabel">700 kbps</b></span>
+                <input id="bitrateSlider" type="range" min="150" max="6000" value="700" />
+              </label>
+
+              <label>
+                <span>Sharpness / network priority</span>
+                <select id="degradationPreference">
+                  <option value="maintain-framerate" selected>Lower image first, keep FPS</option>
+                  <option value="maintain-resolution">Lower FPS first, keep image</option>
+                  <option value="balanced">Balanced</option>
+                </select>
+              </label>
+
+              <div class="split-row">
+                <label class="switch-row">
+                  <input id="gameAudioToggle" type="checkbox" checked />
+                  <span><strong>Game audio</strong><small>Can be changed during stream.</small></span>
+                </label>
+                <label class="switch-row">
+                  <input id="autoNetworkMode" type="checkbox" checked />
+                  <span><strong>Auto weak-internet mode</strong><small>Reduces bitrate if loss/latency rises.</small></span>
+                </label>
+              </div>
+
+              <div class="button-row">
+                <button id="applyQuality" class="primary-btn">Apply now</button>
+                <button id="lowLatencyBtn" class="secondary-btn">Low latency setup</button>
+              </div>
+            </div>
+
+            <div class="card stack">
+              <span class="eyebrow">Network stats</span>
+              <div class="stats-grid">
+                <div><span>Server ping</span><strong id="serverPingValue">-- ms</strong></div>
+                <div><span>Peer RTT</span><strong id="peerRttValue">-- ms</strong></div>
+                <div><span>Stream bitrate</span><strong id="streamBitrateValue">--</strong></div>
+                <div><span>Packet loss</span><strong id="packetLossValue">--</strong></div>
+                <div><span>Input delay</span><strong id="inputDelayValue">-- ms</strong></div>
+                <div><span>TURN</span><strong id="turnStatusValue">Unknown</strong></div>
+              </div>
+              <p id="networkAdvice" class="hint-text">Start with 360p, 15 FPS, 700 kbps for weak internet.</p>
+            </div>
+          </section>
+
+          <section id="settingsScreen" class="screen hidden">
+            <div class="card stack">
+              <span class="eyebrow">Advanced settings</span>
+              <h3>Connection and app settings</h3>
+
+              <label>
+                <span>Signaling server</span>
+                <input id="serverUrl" type="text" value="ws://localhost:8787" />
+              </label>
+
+              <label>
+                <span>STUN URL</span>
+                <input id="stunUrl" type="text" value="stun:stun.l.google.com:19302" />
+              </label>
+
+              <label>
+                <span>TURN URL</span>
+                <input id="turnUrl" type="text" placeholder="turn:YOUR_IP:3478?transport=udp" />
+              </label>
+
+              <div class="split-row">
+                <label>
+                  <span>TURN username</span>
+                  <input id="turnUsername" type="text" />
+                </label>
+                <label>
+                  <span>TURN password</span>
+                  <input id="turnPassword" type="password" />
+                </label>
+              </div>
+
+              <div class="button-row">
+                <button id="saveSettings" class="primary-btn">Save settings</button>
+                <button id="openDebug" class="secondary-btn">Debug logs</button>
+              </div>
+            </div>
+          </section>
+        </section>
+
+        <section class="stream-column">
+          <section class="stage-card">
+            <div class="stage-top">
+              <div>
+                <span class="eyebrow">Stream</span>
+                <h3 id="streamTitle">No active stream</h3>
+              </div>
+              <div class="stage-actions">
+                <button id="lockControls" class="secondary-btn">Lock controls</button>
+                <button id="fullscreenBtn" class="secondary-btn">Fullscreen</button>
+              </div>
+            </div>
+
+            <div id="streamStage" class="video-stage" tabindex="0">
+              <video id="localVideo" class="hidden" autoplay muted playsinline></video>
+              <video id="remoteVideo" autoplay playsinline></video>
+              <div id="emptyStage" class="empty-stage">
+                <h3>Stream appears here</h3>
+                <p>No overlay will cover gameplay. Stats stay tiny like an FPS counter.</p>
+              </div>
+              <div id="tinyOverlay" class="tiny-overlay">Server -- ms · Peer -- ms · -- kbps</div>
+              <div id="warningOverlay" class="warning-overlay hidden"></div>
+            </div>
+          </section>
+
+          <section class="party-strip">
+            <div id="cameraPreview" class="camera-preview hidden">
+              <video id="localCameraVideo" autoplay muted playsinline></video>
+              <span>You</span>
+            </div>
+            <div id="remoteCameraStrip" class="camera-strip"></div>
+          </section>
+
+          <section id="debugPanel" class="debug-panel collapsed">
+            <div class="debug-head">
               <div>
                 <span class="eyebrow">Debug</span>
                 <h3>Logs</h3>
-                <p>Open only when troubleshooting.</p>
               </div>
-              <div class="debug-actions">
-                <button id="debugDrawerToggle" class="secondary-btn small-btn">Open logs</button>
+              <div>
                 <button id="copyLog" class="secondary-btn small-btn">Copy</button>
                 <button id="clearLog" class="secondary-btn small-btn">Clear</button>
               </div>
             </div>
-            <pre id="debugLog" class="debug-log"></pre>
+            <pre id="debugLog"></pre>
           </section>
         </section>
       </section>
     </main>
-  </div>
-
-  <div id="settingsModal" class="modal hidden">
-    <div class="modal-card settings-modal-card">
-      <div class="modal-top">
-        <div>
-          <span class="eyebrow">Advanced settings</span>
-          <h3>Connection settings</h3>
-          <p>Only change this if you are using localhost, ngrok, or a VPS. Appearance and stream quality are saved automatically.</p>
-        </div>
-        <button id="closeSettingsModal" class="text-btn">Close</button>
-      </div>
-
-      <div class="settings-grid">
-        <label>
-          <span>Signaling server</span>
-          <input id="serverUrl" type="text" value="ws://localhost:8787" spellcheck="false" />
-        </label>
-        <label>
-          <span>STUN URL</span>
-          <input id="stunUrl" type="text" value="stun:stun.l.google.com:19302" spellcheck="false" />
-        </label>
-        <label>
-          <span>TURN URL, optional</span>
-          <input id="turnUrl" type="text" placeholder="turn:your-domain.com:3478" spellcheck="false" />
-        </label>
-        <div class="split-fields">
-          <label>
-            <span>TURN username</span>
-            <input id="turnUsername" type="text" placeholder="optional" spellcheck="false" />
-          </label>
-          <label>
-            <span>TURN password</span>
-            <input id="turnPassword" type="password" placeholder="optional" />
-          </label>
-        </div>
-      </div>
-
-      <div class="modal-actions">
-        <button id="saveSettings" class="primary-btn">Save settings</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="toastHost" class="modal hidden">
-    <div class="modal-card approval-card">
-      <div class="modal-top simple-head">
-        <div>
-          <span class="eyebrow">Approval</span>
-          <h3>Guest wants to join</h3>
-          <p>Accept only if this is your invited player.</p>
-        </div>
-      </div>
-      <div class="modal-actions">
-        <button id="acceptGuest" class="primary-btn">Accept</button>
-        <button id="rejectGuest" class="secondary-btn">Reject</button>
-      </div>
-    </div>
   </div>
 
   <div id="toast" class="toast hidden"></div>
