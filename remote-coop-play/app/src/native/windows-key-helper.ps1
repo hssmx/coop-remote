@@ -139,15 +139,87 @@ public static class InputSender
 "@
 
 $KeyMap = @{
-    "KeyW" = @{ vk = 0x57; ext = $false }; "KeyA" = @{ vk = 0x41; ext = $false }
-    "KeyS" = @{ vk = 0x53; ext = $false }; "KeyD" = @{ vk = 0x44; ext = $false }
-
-    "ArrowUp" = @{ vk = 0x26; ext = $true }; "ArrowDown" = @{ vk = 0x28; ext = $true }
-    "ArrowLeft" = @{ vk = 0x25; ext = $true }; "ArrowRight" = @{ vk = 0x27; ext = $true }
-
-    "Space" = @{ vk = 0x20; ext = $false }; "Enter" = @{ vk = 0x0D; ext = $false }
-    "ShiftLeft" = @{ vk = 0x10; ext = $false }; "ShiftRight" = @{ vk = 0x10; ext = $false }
-    "ControlLeft" = @{ vk = 0x11; ext = $false }; "ControlRight" = @{ vk = 0x11; ext = $false }
+    "Backquote" = @{ vk = 0xC0; ext = $false }
+    "Digit1" = @{ vk = 0x31; ext = $false }
+    "Digit2" = @{ vk = 0x32; ext = $false }
+    "Digit3" = @{ vk = 0x33; ext = $false }
+    "Digit4" = @{ vk = 0x34; ext = $false }
+    "Digit5" = @{ vk = 0x35; ext = $false }
+    "Digit6" = @{ vk = 0x36; ext = $false }
+    "Digit7" = @{ vk = 0x37; ext = $false }
+    "Digit8" = @{ vk = 0x38; ext = $false }
+    "Digit9" = @{ vk = 0x39; ext = $false }
+    "Digit0" = @{ vk = 0x30; ext = $false }
+    "Minus" = @{ vk = 0xBD; ext = $false }
+    "Equal" = @{ vk = 0xBB; ext = $false }
+    "Backspace" = @{ vk = 0x08; ext = $false }
+    "Tab" = @{ vk = 0x09; ext = $false }
+    "KeyQ" = @{ vk = 0x51; ext = $false }
+    "KeyW" = @{ vk = 0x57; ext = $false }
+    "KeyE" = @{ vk = 0x45; ext = $false }
+    "KeyR" = @{ vk = 0x52; ext = $false }
+    "KeyT" = @{ vk = 0x54; ext = $false }
+    "KeyY" = @{ vk = 0x59; ext = $false }
+    "KeyU" = @{ vk = 0x55; ext = $false }
+    "KeyI" = @{ vk = 0x49; ext = $false }
+    "KeyO" = @{ vk = 0x4F; ext = $false }
+    "KeyP" = @{ vk = 0x50; ext = $false }
+    "BracketLeft" = @{ vk = 0xDB; ext = $false }
+    "BracketRight" = @{ vk = 0xDD; ext = $false }
+    "Backslash" = @{ vk = 0xDC; ext = $false }
+    "CapsLock" = @{ vk = 0x14; ext = $false }
+    "KeyA" = @{ vk = 0x41; ext = $false }
+    "KeyS" = @{ vk = 0x53; ext = $false }
+    "KeyD" = @{ vk = 0x44; ext = $false }
+    "KeyF" = @{ vk = 0x46; ext = $false }
+    "KeyG" = @{ vk = 0x47; ext = $false }
+    "KeyH" = @{ vk = 0x48; ext = $false }
+    "KeyJ" = @{ vk = 0x4A; ext = $false }
+    "KeyK" = @{ vk = 0x4B; ext = $false }
+    "KeyL" = @{ vk = 0x4C; ext = $false }
+    "Semicolon" = @{ vk = 0xBA; ext = $false }
+    "Quote" = @{ vk = 0xDE; ext = $false }
+    "Enter" = @{ vk = 0x0D; ext = $false }
+    "ShiftLeft" = @{ vk = 0x10; ext = $false }
+    "KeyZ" = @{ vk = 0x5A; ext = $false }
+    "KeyX" = @{ vk = 0x58; ext = $false }
+    "KeyC" = @{ vk = 0x43; ext = $false }
+    "KeyV" = @{ vk = 0x56; ext = $false }
+    "KeyB" = @{ vk = 0x42; ext = $false }
+    "KeyN" = @{ vk = 0x4E; ext = $false }
+    "KeyM" = @{ vk = 0x4D; ext = $false }
+    "Comma" = @{ vk = 0xBC; ext = $false }
+    "Period" = @{ vk = 0xBE; ext = $false }
+    "Slash" = @{ vk = 0xBF; ext = $false }
+    "ShiftRight" = @{ vk = 0x10; ext = $false }
+    "ControlLeft" = @{ vk = 0x11; ext = $false }
+    "AltLeft" = @{ vk = 0x12; ext = $false }
+    "Space" = @{ vk = 0x20; ext = $false }
+    "AltRight" = @{ vk = 0x12; ext = $false }
+    "ControlRight" = @{ vk = 0x11; ext = $false }
+    "ArrowUp" = @{ vk = 0x26; ext = $true }
+    "ArrowDown" = @{ vk = 0x28; ext = $true }
+    "ArrowLeft" = @{ vk = 0x25; ext = $true }
+    "ArrowRight" = @{ vk = 0x27; ext = $true }
+    "Insert" = @{ vk = 0x2D; ext = $true }
+    "Delete" = @{ vk = 0x2E; ext = $true }
+    "Home" = @{ vk = 0x24; ext = $true }
+    "End" = @{ vk = 0x23; ext = $true }
+    "PageUp" = @{ vk = 0x21; ext = $true }
+    "PageDown" = @{ vk = 0x22; ext = $true }
+    "Escape" = @{ vk = 0x1B; ext = $false }
+    "F1" = @{ vk = 0x70; ext = $false }
+    "F2" = @{ vk = 0x71; ext = $false }
+    "F3" = @{ vk = 0x72; ext = $false }
+    "F4" = @{ vk = 0x73; ext = $false }
+    "F5" = @{ vk = 0x74; ext = $false }
+    "F6" = @{ vk = 0x75; ext = $false }
+    "F7" = @{ vk = 0x76; ext = $false }
+    "F8" = @{ vk = 0x77; ext = $false }
+    "F9" = @{ vk = 0x78; ext = $false }
+    "F10" = @{ vk = 0x79; ext = $false }
+    "F11" = @{ vk = 0x7A; ext = $false }
+    "F12" = @{ vk = 0x7B; ext = $false }
 }
 
 [Console]::Out.WriteLine("READY pid=" + $PID)

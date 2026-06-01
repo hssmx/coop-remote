@@ -735,3 +735,140 @@ select:focus {
     display: grid;
   }
 }
+
+
+/* Major UI polish patch */
+.card,
+.stage-card,
+.party-strip,
+.debug-panel {
+  animation: cardIn 180ms ease-out;
+}
+
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.nav-btn,
+.primary-btn,
+.secondary-btn,
+.danger-btn,
+.choice-card,
+.keyboard-key {
+  transition: transform 120ms ease, background 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.nav-btn:hover,
+.primary-btn:hover,
+.secondary-btn:hover,
+.danger-btn:hover,
+.choice-card:hover,
+.keyboard-key:hover {
+  transform: translateY(-1px);
+}
+
+.stream-column {
+  position: sticky;
+  top: 16px;
+}
+
+.party-strip {
+  align-items: center;
+  background: linear-gradient(180deg, var(--surface), var(--surface-2));
+}
+
+.camera-preview,
+.camera-tile {
+  width: 148px;
+  min-width: 148px;
+  height: 92px;
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.14);
+}
+
+.camera-preview video,
+.camera-tile video {
+  transform: none !important;
+  background: #0f172a;
+}
+
+.keyboard-picker {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+  padding: 10px;
+  overflow-x: auto;
+  user-select: none;
+}
+
+.keyboard-row {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 5px;
+}
+
+.keyboard-row:last-child {
+  margin-bottom: 0;
+}
+
+.keyboard-key {
+  min-width: 34px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 800;
+  padding: 0 8px;
+}
+
+.keyboard-key[data-code="Space"] {
+  min-width: 130px;
+}
+
+.keyboard-key[data-code="Tab"],
+.keyboard-key[data-code="CapsLock"],
+.keyboard-key[data-code="ShiftLeft"],
+.keyboard-key[data-code="ShiftRight"],
+.keyboard-key[data-code="Backspace"],
+.keyboard-key[data-code="Enter"] {
+  min-width: 62px;
+}
+
+.keyboard-key.selected {
+  color: white;
+  background: var(--blue);
+  border-color: var(--blue);
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.24);
+}
+
+.video-stage video {
+  transform: none !important;
+}
+
+.tiny-overlay,
+.warning-overlay {
+  z-index: 4;
+  opacity: 0.78;
+}
+
+.member-card {
+  animation: cardIn 160ms ease-out;
+}
+
+.member-head strong {
+  font-size: 15px;
+}
+
+.member-head span {
+  display: block;
+  margin-top: 3px;
+}
+
+@media (min-width: 1320px) {
+  .workspace {
+    grid-template-columns: 410px minmax(0, 1fr);
+  }
+}

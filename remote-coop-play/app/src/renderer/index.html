@@ -105,6 +105,7 @@
                 <button id="refreshSources" class="secondary-btn">Refresh apps</button>
                 <button id="startHost" class="primary-btn">Start hosting</button>
                 <button id="stopHost" class="danger-btn" disabled>Stop</button>
+                <button id="panicInput" class="danger-btn" disabled>Stop all input</button>
               </div>
 
               <div id="roomBox" class="room-box hidden">
@@ -171,9 +172,20 @@
                 </label>
               </div>
 
+              <div class="split-row">
+                <label class="switch-row">
+                  <input id="pushToTalk" type="checkbox" checked />
+                  <span><strong>Push to talk</strong><small>Hold your chosen key to speak.</small></span>
+                </label>
+                <label>
+                  <span>Push-to-talk key</span>
+                  <button id="pttKeyButton" class="secondary-btn full" type="button">V</button>
+                </label>
+              </div>
+
               <label class="switch-row">
-                <input id="pushToTalk" type="checkbox" checked />
-                <span><strong>Push to talk</strong><small>Hold V to speak. Saves bandwidth and noise.</small></span>
+                <input id="antiEchoToggle" type="checkbox" checked />
+                <span><strong>Anti-echo mode</strong><small>Turns off game audio capture while party voice is active.</small></span>
               </label>
             </div>
 

@@ -1,18 +1,85 @@
 const ALLOWED_CODES = new Set([
+  "Backquote",
+  "Digit1",
+  "Digit2",
+  "Digit3",
+  "Digit4",
+  "Digit5",
+  "Digit6",
+  "Digit7",
+  "Digit8",
+  "Digit9",
+  "Digit0",
+  "Minus",
+  "Equal",
+  "Backspace",
+  "Tab",
+  "KeyQ",
   "KeyW",
+  "KeyE",
+  "KeyR",
+  "KeyT",
+  "KeyY",
+  "KeyU",
+  "KeyI",
+  "KeyO",
+  "KeyP",
+  "BracketLeft",
+  "BracketRight",
+  "Backslash",
+  "CapsLock",
   "KeyA",
   "KeyS",
   "KeyD",
+  "KeyF",
+  "KeyG",
+  "KeyH",
+  "KeyJ",
+  "KeyK",
+  "KeyL",
+  "Semicolon",
+  "Quote",
+  "Enter",
+  "ShiftLeft",
+  "KeyZ",
+  "KeyX",
+  "KeyC",
+  "KeyV",
+  "KeyB",
+  "KeyN",
+  "KeyM",
+  "Comma",
+  "Period",
+  "Slash",
+  "ShiftRight",
+  "ControlLeft",
+  "AltLeft",
+  "Space",
+  "AltRight",
+  "ControlRight",
   "ArrowUp",
   "ArrowDown",
   "ArrowLeft",
   "ArrowRight",
-  "Space",
-  "Enter",
-  "ShiftLeft",
-  "ShiftRight",
-  "ControlLeft",
-  "ControlRight"
+  "Insert",
+  "Delete",
+  "Home",
+  "End",
+  "PageUp",
+  "PageDown",
+  "Escape",
+  "F1",
+  "F2",
+  "F3",
+  "F4",
+  "F5",
+  "F6",
+  "F7",
+  "F8",
+  "F9",
+  "F10",
+  "F11",
+  "F12"
 ]);
 
 function normalizeInput(payload) {
@@ -23,13 +90,7 @@ function normalizeInput(payload) {
 
   if (!action || !code || !ALLOWED_CODES.has(code)) return null;
 
-  return {
-    action,
-    code
-  };
+  return { action, code };
 }
 
-module.exports = {
-  ALLOWED_CODES,
-  normalizeInput
-};
+module.exports = { ALLOWED_CODES, normalizeInput };

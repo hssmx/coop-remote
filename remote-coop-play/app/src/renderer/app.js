@@ -31,6 +31,7 @@ const ui = {
   refreshSources: $("#refreshSources"),
   startHost: $("#startHost"),
   stopHost: $("#stopHost"),
+  panicInput: $("#panicInput"),
   roomBox: $("#roomBox"),
   roomCode: $("#roomCode"),
   copyRoom: $("#copyRoom"),
@@ -43,6 +44,8 @@ const ui = {
   cameraToggle: $("#cameraToggle"),
   micToggle: $("#micToggle"),
   pushToTalk: $("#pushToTalk"),
+  pttKeyButton: $("#pttKeyButton"),
+  antiEchoToggle: $("#antiEchoToggle"),
   memberList: $("#memberList"),
 
   resolutionSelect: $("#resolutionSelect"),
@@ -109,10 +112,30 @@ const DEFAULT_SETTINGS = {
   degradationPreference: "maintain-framerate",
   gameAudio: true,
   autoNetworkMode: true,
+  antiEcho: true,
+  pushToTalkKey: "KeyV",
   captureSourceId: ""
 };
 
 const DEFAULT_KEYS = ["KeyW", "KeyA", "KeyS", "KeyD", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space", "Enter", "ShiftLeft", "ShiftRight", "ControlLeft", "ControlRight"];
+
+const KEYBOARD_ROWS = [
+  [
+    ["Escape", "Esc"], ["Digit1", "1"], ["Digit2", "2"], ["Digit3", "3"], ["Digit4", "4"], ["Digit5", "5"], ["Digit6", "6"], ["Digit7", "7"], ["Digit8", "8"], ["Digit9", "9"], ["Digit0", "0"], ["Minus", "-"], ["Equal", "="], ["Backspace", "Back"]
+  ],
+  [
+    ["Tab", "Tab"], ["KeyQ", "Q"], ["KeyW", "W"], ["KeyE", "E"], ["KeyR", "R"], ["KeyT", "T"], ["KeyY", "Y"], ["KeyU", "U"], ["KeyI", "I"], ["KeyO", "O"], ["KeyP", "P"], ["BracketLeft", "["], ["BracketRight", "]"], ["Backslash", "\\"]
+  ],
+  [
+    ["CapsLock", "Caps"], ["KeyA", "A"], ["KeyS", "S"], ["KeyD", "D"], ["KeyF", "F"], ["KeyG", "G"], ["KeyH", "H"], ["KeyJ", "J"], ["KeyK", "K"], ["KeyL", "L"], ["Semicolon", ";"], ["Quote", "'"], ["Enter", "Enter"]
+  ],
+  [
+    ["ShiftLeft", "Shift"], ["KeyZ", "Z"], ["KeyX", "X"], ["KeyC", "C"], ["KeyV", "V"], ["KeyB", "B"], ["KeyN", "N"], ["KeyM", "M"], ["Comma", ","], ["Period", "."], ["Slash", "/"], ["ShiftRight", "Shift"]
+  ],
+  [
+    ["ControlLeft", "Ctrl"], ["AltLeft", "Alt"], ["Space", "Space"], ["AltRight", "Alt"], ["ControlRight", "Ctrl"], ["ArrowLeft", "←"], ["ArrowUp", "↑"], ["ArrowDown", "↓"], ["ArrowRight", "→"]
+  ]
+];
 
 const state = {
   role: null,
@@ -121,6 +144,8 @@ const state = {
   room: null,
   localGameStream: null,
   localPartyStream: null,
+  gameStreamId: null,
+  partyStreamId: null,
   peers: new Map(),
   pendingIce: new Map(),
   captureSources: [],
@@ -201,6 +226,8 @@ function loadSettings() {
   ui.degradationPreference.value = state.settings.degradationPreference;
   ui.gameAudioToggle.checked = Boolean(state.settings.gameAudio);
   ui.autoNetworkMode.checked = Boolean(state.settings.autoNetworkMode);
+  ui.antiEchoToggle.checked = Boolean(state.settings.antiEcho);
+  ui.pttKeyButton.textContent = keyCodeToLabel(state.settings.pushToTalkKey || "KeyV");
   applyTheme(state.settings.theme);
   updateQualityLabels();
 }
@@ -220,6 +247,9 @@ function saveSettings() {
     degradationPreference: ui.degradationPreference.value,
     gameAudio: ui.gameAudioToggle.checked,
     autoNetworkMode: ui.autoNetworkMode.checked,
+    antiEcho: ui.antiEchoToggle.checked,
+    antiEcho: ui.antiEchoToggle.checked,
+    pushToTalkKey: state.settings.pushToTalkKey || "KeyV",
     captureSourceId: ui.captureSource.value || state.settings.captureSourceId,
     theme: state.settings.theme
   };
@@ -250,7 +280,8 @@ function getQuality() {
     bitrate: Number(ui.bitrateSlider.value) * 1000,
     degradationPreference: ui.degradationPreference.value,
     gameAudio: ui.gameAudioToggle.checked,
-    autoNetworkMode: ui.autoNetworkMode.checked
+    autoNetworkMode: ui.autoNetworkMode.checked,
+    antiEcho: ui.antiEchoToggle.checked
   };
 }
 
@@ -259,6 +290,79 @@ function updateQualityLabels() {
   ui.imageQualityLabel.textContent = `${q.imageQuality}%`;
   ui.bitrateLabel.textContent = formatBitrate(q.bitrate);
 }
+
+
+function keyCodeToLabel(code) {
+  for (const row of KEYBOARD_ROWS) {
+    const found = row.find(([value]) => value === code);
+    if (found) return found[1];
+  }
+  return String(code || "V").replace("Key", "");
+}
+
+function syncPeersFromRoom() {
+  if (!state.room || !state.peerId) return;
+  const members = state.room.members || [];
+
+  for (const member of members) {
+    if (member.peerId === state.peerId) continue;
+    const initiator = state.peerId < member.peerId;
+    ensurePeer(member.peerId, initiator).catch((error) => {
+      log("warn", "Could not sync peer", { peerId: member.peerId, error: error.message });
+    });
+  }
+}
+
+function classifyIncomingTrack(peer, event) {
+  const streamId = event.streams && event.streams[0] ? event.streams[0].id : "";
+
+  if (peer.remoteGameStreamId && streamId === peer.remoteGameStreamId) return "game";
+  if (peer.remotePartyStreamId && streamId === peer.remotePartyStreamId) return "party";
+
+  const fromHost = peer.peerId === state.room?.hostPeerId;
+
+  if (fromHost && state.role === "guest" && event.track.kind === "video" && !ui.remoteVideo.srcObject) return "game";
+  if (fromHost && state.role === "guest" && event.track.kind === "audio" && !peer.remoteStream.getAudioTracks().length) return "game";
+
+  return "party";
+}
+
+function signalMeta() {
+  return {
+    gameStreamId: state.role === "host" && state.localGameStream ? state.localGameStream.id : null,
+    partyStreamId: state.localPartyStream ? state.localPartyStream.id : null
+  };
+}
+
+function applySignalMeta(peer, meta) {
+  if (!peer || !meta) return;
+  if (meta.gameStreamId) peer.remoteGameStreamId = meta.gameStreamId;
+  if (meta.partyStreamId) peer.remotePartyStreamId = meta.partyStreamId;
+}
+
+function updateGameAudioTracks() {
+  if (!state.localGameStream) return;
+
+  const q = getQuality();
+  const partyVoiceActive = Boolean(state.localPartyStream && state.localPartyStream.getAudioTracks().length);
+  const allowGameAudio = q.gameAudio && !(state.role === "host" && q.antiEcho && partyVoiceActive);
+
+  for (const track of state.localGameStream.getAudioTracks()) {
+    track.enabled = allowGameAudio;
+  }
+
+  if (q.gameAudio && !allowGameAudio) {
+    showWarning("Anti-echo: game audio capture paused while party voice is active");
+  }
+}
+
+async function applyRemoteMediaControl(msg) {
+  if (msg.camera === false) ui.cameraToggle.checked = false;
+  if (msg.mic === false) ui.micToggle.checked = false;
+  await startLocalPartyMedia();
+  toast(msg.reason || "Host changed your camera/mic access.", 3500);
+}
+
 
 function formatBitrate(bps) {
   if (!Number.isFinite(bps)) return "--";
@@ -344,6 +448,7 @@ function handleWsMessage(msg) {
     case "room-state":
       state.room = msg.room;
       renderRoom();
+      syncPeersFromRoom();
       break;
 
     case "join-request":
@@ -366,7 +471,8 @@ function handleWsMessage(msg) {
       showScreen("party");
       ui.leaveRoom.disabled = false;
       toast("Host accepted you.");
-      ensurePeer(msg.hostPeerId, false);
+      ensurePeer(msg.hostPeerId, state.peerId < msg.hostPeerId);
+      syncPeersFromRoom();
       break;
 
     case "guest-connected":
@@ -516,6 +622,9 @@ async function startHosting() {
 
     state.role = "host";
     state.localGameStream = await captureGameStream();
+    state.gameStreamId = state.localGameStream.id;
+    await window.remoteCoop.setInputEnabled(true);
+    ui.panicInput.disabled = false;
     ui.localVideo.srcObject = state.localGameStream;
     ui.localVideo.classList.remove("hidden");
     ui.remoteVideo.classList.add("hidden");
@@ -582,6 +691,8 @@ function resetAll() {
   ui.roomCode.textContent = "------";
   ui.startHost.disabled = false;
   ui.stopHost.disabled = true;
+  ui.panicInput.disabled = true;
+  window.remoteCoop.setInputEnabled(false).catch(() => {});
   ui.joinRoom.disabled = false;
   ui.leaveRoom.disabled = true;
   ui.lockControls.textContent = "Lock controls";
@@ -618,6 +729,8 @@ async function ensurePeer(targetPeerId, initiator) {
     dc: null,
     remoteStream: new MediaStream(),
     cameraStream: new MediaStream(),
+    remoteGameStreamId: null,
+    remotePartyStreamId: null,
     stats: new Map()
   };
 
@@ -641,31 +754,32 @@ async function ensurePeer(targetPeerId, initiator) {
 
   pc.ontrack = (event) => {
     const track = event.track;
+    const kind = classifyIncomingTrack(peer, event);
 
-    if (state.role === "guest" && track.kind === "video" && !ui.remoteVideo.srcObject) {
+    if (kind === "game") {
       peer.remoteStream.addTrack(track);
-      ui.remoteVideo.srcObject = peer.remoteStream;
-      ui.remoteVideo.classList.remove("hidden");
-      ui.localVideo.classList.add("hidden");
-      ui.emptyStage.classList.add("hidden");
-      ui.streamTitle.textContent = "Remote game stream";
+
+      if (track.kind === "video") {
+        ui.remoteVideo.srcObject = peer.remoteStream;
+        ui.remoteVideo.classList.remove("hidden");
+        ui.localVideo.classList.add("hidden");
+        ui.emptyStage.classList.add("hidden");
+        ui.streamTitle.textContent = "Remote game stream";
+      }
       return;
     }
 
-    if (state.role === "guest" && track.kind === "audio" && !peer.remoteStream.getAudioTracks().length) {
-      peer.remoteStream.addTrack(track);
-      return;
-    }
-
-    if (track.kind === "video") {
-      peer.cameraStream.addTrack(track);
-      renderCameraTile(targetPeerId, peer.cameraStream);
-    } else if (track.kind === "audio") {
-      const audio = document.createElement("audio");
-      audio.autoplay = true;
-      audio.srcObject = new MediaStream([track]);
-      audio.dataset.peerId = targetPeerId;
-      document.body.appendChild(audio);
+    if (kind === "party") {
+      if (track.kind === "video") {
+        peer.cameraStream.addTrack(track);
+        renderCameraTile(targetPeerId, peer.cameraStream);
+      } else if (track.kind === "audio") {
+        const audio = document.createElement("audio");
+        audio.autoplay = true;
+        audio.srcObject = new MediaStream([track]);
+        audio.dataset.peerId = targetPeerId;
+        document.body.appendChild(audio);
+      }
     }
   };
 
@@ -693,7 +807,7 @@ async function ensurePeer(targetPeerId, initiator) {
       type: "signal",
       roomCode: state.room?.code,
       targetPeerId,
-      payload: { type: "offer", sdp: pc.localDescription }
+      payload: { type: "offer", sdp: pc.localDescription, meta: signalMeta() }
     });
   }
 
@@ -721,6 +835,7 @@ async function handleSignal(fromPeerId, payload) {
   const pc = peer.pc;
 
   if (payload.type === "offer") {
+    applySignalMeta(peer, payload.meta);
     await pc.setRemoteDescription(payload.sdp);
     const answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
@@ -728,9 +843,10 @@ async function handleSignal(fromPeerId, payload) {
       type: "signal",
       roomCode: state.room?.code,
       targetPeerId: fromPeerId,
-      payload: { type: "answer", sdp: pc.localDescription }
+      payload: { type: "answer", sdp: pc.localDescription, meta: signalMeta() }
     });
   } else if (payload.type === "answer") {
+    applySignalMeta(peer, payload.meta);
     await pc.setRemoteDescription(payload.sdp);
   } else if (payload.type === "ice") {
     try {
@@ -758,6 +874,17 @@ function getMember(peerId) {
 }
 
 function handleDataMessage(peerId, msg) {
+  if (msg.kind === "pong-input") {
+    state.inputDelay = Math.max(0, Date.now() - msg.at);
+    updateStatsUi();
+    return;
+  }
+
+  if (msg.kind === "media-control") {
+    applyRemoteMediaControl(msg);
+    return;
+  }
+
   if (state.role !== "host") return;
 
   if (msg.kind === "ping-input") {
@@ -771,7 +898,9 @@ function handleDataMessage(peerId, msg) {
   if (msg.kind === "key") {
     if (!perms.keyboard) return;
     if (!perms.allowedKeys?.includes("*") && !perms.allowedKeys?.includes(msg.code)) return;
-    window.remoteCoop.sendInput({ type: "key", action: msg.action, code: msg.code });
+    window.remoteCoop.sendInput({ type: "key", action: msg.action, code: msg.code }).then((result) => {
+      if (!result.ok) log("warn", "Host input refused", result);
+    });
     return;
   }
 
@@ -779,7 +908,9 @@ function handleDataMessage(peerId, msg) {
     if (msg.action === "move" && !perms.mouseMove) return;
     if (["down", "up", "click"].includes(msg.action) && !perms.mouseButtons) return;
     if (msg.action === "wheel" && !perms.mouseWheel) return;
-    window.remoteCoop.sendInput({ type: "mouse", ...msg });
+    window.remoteCoop.sendInput({ type: "mouse", ...msg }).then((result) => {
+      if (!result.ok) log("warn", "Host mouse input refused", result);
+    });
   }
 }
 
@@ -798,6 +929,7 @@ async function startLocalPartyMedia() {
     stopTracks(state.localPartyStream);
     state.localPartyStream = null;
     ui.cameraPreview.classList.add("hidden");
+    updateGameAudioTracks();
     broadcastMediaState();
     await renegotiateAll();
     return;
@@ -815,11 +947,13 @@ async function startLocalPartyMedia() {
 
     stopTracks(state.localPartyStream);
     state.localPartyStream = stream;
+    state.partyStreamId = stream.id;
 
     ui.localCameraVideo.srcObject = stream;
     ui.cameraPreview.classList.toggle("hidden", !needCamera);
 
     await addOrReplacePartyTracks(stream);
+    updateGameAudioTracks();
     await renegotiateAll();
     broadcastMediaState();
   } catch (error) {
@@ -833,7 +967,7 @@ async function startLocalPartyMedia() {
 async function addOrReplacePartyTracks(stream) {
   for (const peer of state.peers.values()) {
     for (const track of stream.getTracks()) {
-      const sender = peer.pc.getSenders().find((s) => s.track && s.track.kind === track.kind && s.track.label.includes("RemoteCoopParty"));
+      const sender = peer.pc.getSenders().find((s) => s.track && s.track.kind === track.kind && state.localPartyStream && state.localPartyStream.getTracks().includes(s.track));
       if (sender) {
         await sender.replaceTrack(track);
       } else {
@@ -903,6 +1037,8 @@ async function refreshGameCapture() {
   }
 
   state.localGameStream = newStream;
+  state.gameStreamId = newStream.id;
+  updateGameAudioTracks();
   ui.localVideo.srcObject = newStream;
   stopTracks(oldStream);
 
@@ -1061,10 +1197,11 @@ function renderMembers(members) {
           <label><input type="checkbox" data-perm="mouseButtons" ${p.mouseButtons ? "checked" : ""}> Mouse clicks</label>
           <label><input type="checkbox" data-perm="mouseWheel" ${p.mouseWheel ? "checked" : ""}> Mouse wheel</label>
         </div>
-        <label>
-          <span>Allowed keys, comma separated. Use * for all.</span>
-          <input class="key-input" data-keys value="${escapeHtml((p.allowedKeys || DEFAULT_KEYS).join(","))}" />
-        </label>
+        <div class="button-row">
+          <button class="secondary-btn small-btn" data-media="mute">Mute mic</button>
+          <button class="secondary-btn small-btn" data-media="camera-off">Disable camera</button>
+        </div>
+        <div class="keyboard-picker" data-keyboard></div>
       ` : ""}
     `;
 
@@ -1073,15 +1210,68 @@ function renderMembers(members) {
         input.addEventListener("change", () => updatePermissions(member.peerId, { [input.dataset.perm]: input.checked }));
       });
 
-      const keyInput = card.querySelector("[data-keys]");
-      keyInput.addEventListener("change", () => {
-        const allowedKeys = keyInput.value.split(",").map((x) => x.trim()).filter(Boolean);
-        updatePermissions(member.peerId, { allowedKeys });
-      });
+      card.querySelector('[data-media="mute"]').addEventListener("click", () => sendData(member.peerId, { kind: "media-control", mic: false, reason: "Host muted your mic." }));
+      card.querySelector('[data-media="camera-off"]').addEventListener("click", () => sendData(member.peerId, { kind: "media-control", camera: false, reason: "Host disabled your camera." }));
+
+      renderKeyboardPicker(card.querySelector("[data-keyboard]"), member);
     }
 
     ui.memberList.appendChild(card);
   }
+}
+
+function renderKeyboardPicker(container, member) {
+  const permissions = member.permissions || {};
+  const selected = new Set(permissions.allowedKeys || DEFAULT_KEYS);
+  let dragging = false;
+  let dragValue = true;
+
+  container.innerHTML = "";
+
+  for (const row of KEYBOARD_ROWS) {
+    const rowEl = document.createElement("div");
+    rowEl.className = "keyboard-row";
+
+    for (const [code, label] of row) {
+      const key = document.createElement("button");
+      key.type = "button";
+      key.className = "keyboard-key";
+      key.dataset.code = code;
+      key.textContent = label;
+      key.classList.toggle("selected", selected.has(code) || selected.has("*"));
+
+      const setKey = (value) => {
+        if (value) selected.add(code);
+        else selected.delete(code);
+        key.classList.toggle("selected", value);
+      };
+
+      key.addEventListener("mousedown", (event) => {
+        event.preventDefault();
+        dragging = true;
+        dragValue = !(selected.has(code) || selected.has("*"));
+        setKey(dragValue);
+      });
+
+      key.addEventListener("mouseenter", () => {
+        if (dragging) setKey(dragValue);
+      });
+
+      key.addEventListener("click", () => {
+        updatePermissions(member.peerId, { allowedKeys: Array.from(selected) });
+      });
+
+      rowEl.appendChild(key);
+    }
+
+    container.appendChild(rowEl);
+  }
+
+  window.addEventListener("mouseup", () => {
+    if (!dragging) return;
+    dragging = false;
+    updatePermissions(member.peerId, { allowedKeys: Array.from(selected) });
+  }, { once: true });
 }
 
 function renderCameraTile(peerId, stream) {
@@ -1139,7 +1329,7 @@ function sendToHost(payload) {
 }
 
 function handleKeyDown(event) {
-  if (ui.pushToTalk.checked && event.code === "KeyV") {
+  if (ui.pushToTalk.checked && event.code === (state.settings.pushToTalkKey || "KeyV")) {
     setMicEnabled(true);
   }
 
@@ -1158,7 +1348,7 @@ function handleKeyDown(event) {
 }
 
 function handleKeyUp(event) {
-  if (ui.pushToTalk.checked && event.code === "KeyV") {
+  if (ui.pushToTalk.checked && event.code === (state.settings.pushToTalkKey || "KeyV")) {
     setMicEnabled(false);
   }
 
@@ -1300,7 +1490,7 @@ function updateStatsUi() {
   ui.inputDelayValue.textContent = `${input} ms`;
   ui.tinyOverlay.textContent = `Server ${server}ms · Peer ${peer}ms · ${stream} · Loss ${loss}`;
 
-  if (!state.turnUrl && ui.turnStatusValue.textContent === "Unknown") {
+  if (ui.turnStatusValue.textContent === "Unknown") {
     ui.turnStatusValue.textContent = state.settings.turnUrl ? "Configured" : "Not configured";
   }
 
@@ -1311,6 +1501,19 @@ function updateStatsUi() {
   } else {
     ui.networkAdvice.textContent = "Connection looks usable. Increase quality slowly if needed.";
   }
+}
+
+function listenForPttKey() {
+  ui.pttKeyButton.textContent = "Press a key...";
+  const handler = (event) => {
+    event.preventDefault();
+    state.settings.pushToTalkKey = event.code;
+    ui.pttKeyButton.textContent = keyCodeToLabel(event.code);
+    saveSettings();
+    window.removeEventListener("keydown", handler, true);
+    toast(`Push-to-talk set to ${keyCodeToLabel(event.code)}.`);
+  };
+  window.addEventListener("keydown", handler, true);
 }
 
 function bindEvents() {
@@ -1335,6 +1538,11 @@ function bindEvents() {
   ui.refreshSources.addEventListener("click", loadCaptureSources);
   ui.startHost.addEventListener("click", startHosting);
   ui.stopHost.addEventListener("click", stopHosting);
+  ui.panicInput.addEventListener("click", async () => {
+    await window.remoteCoop.setInputEnabled(false);
+    await window.remoteCoop.releaseAllKeys();
+    toast("All remote input stopped.");
+  });
   ui.copyRoom.addEventListener("click", async () => {
     if (!state.room?.code) return;
     await navigator.clipboard.writeText(state.room.code);
@@ -1349,14 +1557,16 @@ function bindEvents() {
   ui.allowJoins.addEventListener("change", updateRoomSettings);
   ui.cameraToggle.addEventListener("change", startLocalPartyMedia);
   ui.micToggle.addEventListener("change", startLocalPartyMedia);
+  ui.pttKeyButton.addEventListener("click", listenForPttKey);
+  ui.antiEchoToggle.addEventListener("change", () => { saveSettings(); updateGameAudioTracks(); });
   ui.pushToTalk.addEventListener("change", () => {
     if (ui.pushToTalk.checked) setMicEnabled(false);
     else setMicEnabled(true);
   });
 
-  [ui.resolutionSelect, ui.fpsSelect, ui.imageQuality, ui.bitrateSlider, ui.degradationPreference, ui.gameAudioToggle, ui.autoNetworkMode].forEach((el) => {
+  [ui.resolutionSelect, ui.fpsSelect, ui.imageQuality, ui.bitrateSlider, ui.degradationPreference, ui.gameAudioToggle, ui.autoNetworkMode, ui.antiEchoToggle].forEach((el) => {
     el.addEventListener("input", () => { saveSettings(); updateQualityLabels(); });
-    el.addEventListener("change", () => { saveSettings(); updateQualityLabels(); });
+    el.addEventListener("change", () => { saveSettings(); updateQualityLabels(); updateGameAudioTracks(); });
   });
 
   ui.applyQuality.addEventListener("click", applyQualityNow);
