@@ -4,12 +4,17 @@ const $$ = (selector) => Array.from(document.querySelectorAll(selector));
 const ui = {
   appFrame: $(".app-frame"),
   sidebar: $("#sidebar"),
+  workspace: $("#workspace"),
+  dockLayer: $("#dockLayer"),
   collapseSidebar: $("#collapseSidebar"),
   expandSidebar: $("#expandSidebar"),
   navButtons: $$(".nav-btn"),
   pageTitle: $("#pageTitle"),
   pageSubtitle: $("#pageSubtitle"),
   themeToggle: $("#themeToggle"),
+  layoutEditToggle: $("#layoutEditToggle"),
+  layoutSave: $("#layoutSave"),
+  layoutReset: $("#layoutReset"),
 
   screens: {
     home: $("#homeScreen"),
@@ -114,7 +119,8 @@ const DEFAULT_SETTINGS = {
   autoNetworkMode: true,
   antiEcho: true,
   pushToTalkKey: "KeyV",
-  captureSourceId: ""
+  captureSourceId: "",
+  layout: {}
 };
 
 const DEFAULT_KEYS = ["KeyW", "KeyA", "KeyS", "KeyD", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space", "Enter", "ShiftLeft", "ShiftRight", "ControlLeft", "ControlRight"];
@@ -161,6 +167,9 @@ const state = {
   packetLoss: null,
   inputDelay: null,
   adaptiveFactor: 1,
+  layoutEditing: false,
+  layoutDrag: null,
+  panelZ: 10,
   logs: []
 };
 
@@ -1516,6 +1525,250 @@ function listenForPttKey() {
   window.addEventListener("keydown", handler, true);
 }
 
+
+function initLayoutEditor() {
+  document.querySelectorAll("[data-panel]").forEach((panel) => {
+    if (panel.querySelector(":scope > .layout-panel-bar")) return;
+
+    const title = panel.dataset.panelTitle || panel.dataset.panel || "Panel";
+    const bar = document.createElement("div");
+    bar.className = "layout-panel-bar";
+    bar.innerHTML = `
+      <span class="layout-panel-title">${escapeHtml(title)}</span>
+      <span class="layout-panel-actions">
+        <button type="button" data-layout-action="dock-left">L</button>
+        <button type="button" data-layout-action="dock-center">C</button>
+        <button type="button" data-layout-action="dock-right">R</button>
+        <button type="button" data-layout-action="dock-bottom">B</button>
+        <button type="button" data-layout-action="collapse">_</button>
+      </span>
+    `;
+
+    panel.prepend(bar);
+
+    bar.addEventListener("mousedown", (event) => startPanelDrag(event, panel));
+
+    bar.querySelectorAll("[data-layout-action]").forEach((button) => {
+      button.addEventListener("click", (event) => {
+        event.stopPropagation();
+        handlePanelAction(panel, button.dataset.layoutAction);
+      });
+    });
+  });
+
+  applySavedLayout();
+}
+
+function toggleLayoutEditor() {
+  state.layoutEditing = !state.layoutEditing;
+
+  document.body.classList.toggle("layout-editing", state.layoutEditing);
+  ui.layoutEditToggle.textContent = state.layoutEditing ? "Exit layout" : "Edit layout";
+  ui.layoutSave.classList.toggle("hidden", !state.layoutEditing);
+  ui.layoutReset.classList.toggle("hidden", !state.layoutEditing);
+
+  if (state.layoutEditing) {
+    prepareLayoutEditPositions();
+    toast("Layout edit mode: drag panels, resize corners, dock with L/C/R/B.", 4600);
+  } else {
+    saveLayout();
+    document.body.classList.remove("layout-dragging");
+  }
+}
+
+function prepareLayoutEditPositions() {
+  const workspaceRect = ui.workspace.getBoundingClientRect();
+  const panels = Array.from(document.querySelectorAll("[data-panel]"));
+
+  panels.forEach((panel, index) => {
+    const saved = state.settings.layout?.[panel.dataset.panel];
+    if (saved) {
+      applyPanelLayout(panel, saved);
+      return;
+    }
+
+    const rect = panel.getBoundingClientRect();
+    const fallback = defaultPanelLayout(panel.dataset.panel, index, workspaceRect);
+    const layout = {
+      left: Math.max(8, rect.left - workspaceRect.left || fallback.left),
+      top: Math.max(8, rect.top - workspaceRect.top || fallback.top),
+      width: Math.max(260, rect.width || fallback.width),
+      height: Math.max(120, rect.height || fallback.height),
+      collapsed: false
+    };
+
+    applyPanelLayout(panel, layout);
+  });
+}
+
+function defaultPanelLayout(id, index, workspaceRect) {
+  const w = Math.max(900, workspaceRect.width || 1200);
+  const h = Math.max(700, workspaceRect.height || 820);
+
+  const layouts = {
+    controls: { left: 8, top: 8, width: 410, height: h - 16 },
+    stream: { left: 430, top: 8, width: w - 438, height: Math.round(h * 0.68) },
+    party: { left: 430, top: Math.round(h * 0.70), width: w - 438, height: 105 },
+    debug: { left: 430, top: Math.round(h * 0.84), width: w - 438, height: 150 }
+  };
+
+  return layouts[id] || { left: 24 + index * 32, top: 24 + index * 32, width: 360, height: 240 };
+}
+
+function applyPanelLayout(panel, layout) {
+  panel.style.left = `${layout.left}px`;
+  panel.style.top = `${layout.top}px`;
+  panel.style.width = `${layout.width}px`;
+  panel.style.height = `${layout.height}px`;
+  panel.style.zIndex = String(layout.z || ++state.panelZ);
+  panel.classList.toggle("layout-collapsed", Boolean(layout.collapsed));
+}
+
+function readPanelLayout(panel) {
+  return {
+    left: Number.parseFloat(panel.style.left) || 0,
+    top: Number.parseFloat(panel.style.top) || 0,
+    width: Number.parseFloat(panel.style.width) || panel.offsetWidth,
+    height: Number.parseFloat(panel.style.height) || panel.offsetHeight,
+    z: Number.parseInt(panel.style.zIndex || "1", 10),
+    collapsed: panel.classList.contains("layout-collapsed")
+  };
+}
+
+function saveLayout() {
+  const layout = {};
+  document.querySelectorAll("[data-panel]").forEach((panel) => {
+    layout[panel.dataset.panel] = readPanelLayout(panel);
+  });
+
+  state.settings.layout = layout;
+  saveSettings();
+  toast("Layout saved.");
+}
+
+function applySavedLayout() {
+  const layout = state.settings.layout || {};
+  document.querySelectorAll("[data-panel]").forEach((panel) => {
+    const item = layout[panel.dataset.panel];
+    if (item) applyPanelLayout(panel, item);
+  });
+}
+
+function resetLayout() {
+  state.settings.layout = {};
+  localStorage.setItem("remoteCoopV3Settings", JSON.stringify(state.settings));
+
+  document.querySelectorAll("[data-panel]").forEach((panel) => {
+    panel.style.left = "";
+    panel.style.top = "";
+    panel.style.width = "";
+    panel.style.height = "";
+    panel.style.zIndex = "";
+    panel.classList.remove("layout-collapsed", "panel-active");
+  });
+
+  if (state.layoutEditing) prepareLayoutEditPositions();
+  toast("Layout reset.");
+}
+
+function startPanelDrag(event, panel) {
+  if (!state.layoutEditing) return;
+  if (event.button !== 0) return;
+
+  event.preventDefault();
+
+  const rect = panel.getBoundingClientRect();
+  const workspaceRect = ui.workspace.getBoundingClientRect();
+
+  state.layoutDrag = {
+    panel,
+    startX: event.clientX,
+    startY: event.clientY,
+    startLeft: rect.left - workspaceRect.left,
+    startTop: rect.top - workspaceRect.top
+  };
+
+  panel.classList.add("panel-active");
+  panel.style.zIndex = String(++state.panelZ);
+  document.body.classList.add("layout-dragging");
+
+  window.addEventListener("mousemove", movePanelDrag);
+  window.addEventListener("mouseup", endPanelDrag, { once: true });
+}
+
+function movePanelDrag(event) {
+  const drag = state.layoutDrag;
+  if (!drag) return;
+
+  const workspaceRect = ui.workspace.getBoundingClientRect();
+  const panel = drag.panel;
+  const nextLeft = clamp(drag.startLeft + event.clientX - drag.startX, 4, Math.max(4, workspaceRect.width - 120));
+  const nextTop = clamp(drag.startTop + event.clientY - drag.startY, 4, Math.max(4, workspaceRect.height - 80));
+
+  panel.style.left = `${nextLeft}px`;
+  panel.style.top = `${nextTop}px`;
+
+  updateDockHotZone(event.clientX, event.clientY);
+}
+
+function endPanelDrag(event) {
+  window.removeEventListener("mousemove", movePanelDrag);
+
+  const drag = state.layoutDrag;
+  state.layoutDrag = null;
+  document.body.classList.remove("layout-dragging");
+
+  document.querySelectorAll(".dock-zone.hot").forEach((zone) => zone.classList.remove("hot"));
+
+  if (!drag) return;
+
+  const dock = getDockUnderPoint(event.clientX, event.clientY);
+  if (dock) dockPanel(drag.panel, dock);
+
+  drag.panel.classList.remove("panel-active");
+  saveLayout();
+}
+
+function updateDockHotZone(x, y) {
+  document.querySelectorAll(".dock-zone").forEach((zone) => zone.classList.toggle("hot", pointInside(zone.getBoundingClientRect(), x, y)));
+}
+
+function getDockUnderPoint(x, y) {
+  const zone = Array.from(document.querySelectorAll(".dock-zone")).find((el) => pointInside(el.getBoundingClientRect(), x, y));
+  return zone ? zone.dataset.dock : null;
+}
+
+function pointInside(rect, x, y) {
+  return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+}
+
+function handlePanelAction(panel, action) {
+  if (action === "collapse") {
+    panel.classList.toggle("layout-collapsed");
+    saveLayout();
+    return;
+  }
+
+  const dock = action.replace("dock-", "");
+  dockPanel(panel, dock);
+  saveLayout();
+}
+
+function dockPanel(panel, dock) {
+  const rect = ui.workspace.getBoundingClientRect();
+  const pad = 8;
+
+  const layouts = {
+    left: { left: pad, top: pad, width: Math.round(rect.width * 0.28), height: Math.round(rect.height - pad * 2) },
+    right: { left: Math.round(rect.width * 0.72) - pad, top: pad, width: Math.round(rect.width * 0.28), height: Math.round(rect.height - pad * 2) },
+    bottom: { left: Math.round(rect.width * 0.25), top: Math.round(rect.height * 0.72), width: Math.round(rect.width * 0.5), height: Math.round(rect.height * 0.26) },
+    center: { left: Math.round(rect.width * 0.30), top: pad, width: Math.round(rect.width * 0.69) - pad, height: Math.round(rect.height * 0.70) }
+  };
+
+  applyPanelLayout(panel, { ...layouts[dock], collapsed: false, z: ++state.panelZ });
+}
+
+
 function bindEvents() {
   ui.navButtons.forEach((btn) => btn.addEventListener("click", () => {
     showScreen(btn.dataset.screen);
@@ -1535,6 +1788,9 @@ function bindEvents() {
   ui.homeHost.addEventListener("click", () => { showScreen("host"); loadCaptureSources(); });
   ui.homeJoin.addEventListener("click", () => showScreen("join"));
   ui.themeToggle.addEventListener("click", toggleTheme);
+  ui.layoutEditToggle.addEventListener("click", toggleLayoutEditor);
+  ui.layoutSave.addEventListener("click", saveLayout);
+  ui.layoutReset.addEventListener("click", resetLayout);
   ui.refreshSources.addEventListener("click", loadCaptureSources);
   ui.startHost.addEventListener("click", startHosting);
   ui.stopHost.addEventListener("click", stopHosting);
@@ -1604,6 +1860,7 @@ function clamp(n, min, max) {
 }
 
 loadSettings();
+initLayoutEditor();
 bindEvents();
 showScreen("home");
 updateStatsUi();

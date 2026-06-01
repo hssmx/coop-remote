@@ -872,3 +872,187 @@ select:focus {
     grid-template-columns: 410px minmax(0, 1fr);
   }
 }
+
+
+/* Unity-style layout editor */
+.topbar-actions .hidden {
+  display: none !important;
+}
+
+.workspace {
+  position: relative;
+  min-height: 720px;
+}
+
+.layout-editing .workspace {
+  min-height: 820px;
+  outline: 1px dashed rgba(59, 130, 246, 0.28);
+  border-radius: 20px;
+}
+
+.layout-editing [data-panel] {
+  position: absolute !important;
+  min-width: 260px;
+  min-height: 120px;
+  max-width: calc(100% - 16px);
+  max-height: none;
+  overflow: auto;
+  resize: both;
+  z-index: 5;
+  box-shadow: 0 22px 60px rgba(15, 23, 42, 0.22);
+}
+
+.layout-editing [data-panel].panel-active {
+  z-index: 20;
+  outline: 2px solid rgba(59, 130, 246, 0.55);
+}
+
+.layout-panel-bar {
+  display: none;
+}
+
+.layout-editing .layout-panel-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  margin: -16px -16px 12px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  backdrop-filter: blur(12px);
+  cursor: grab;
+  user-select: none;
+}
+
+.layout-editing .stage-card .layout-panel-bar,
+.layout-editing .party-strip .layout-panel-bar,
+.layout-editing .debug-panel .layout-panel-bar {
+  margin: 0;
+}
+
+.layout-panel-bar:active {
+  cursor: grabbing;
+}
+
+.layout-panel-title {
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--text);
+}
+
+.layout-panel-actions {
+  display: flex;
+  gap: 5px;
+}
+
+.layout-panel-actions button {
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 4px 7px;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.layout-collapsed > :not(.layout-panel-bar) {
+  display: none !important;
+}
+
+.layout-collapsed {
+  min-height: 40px !important;
+  resize: none !important;
+}
+
+.dock-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+}
+
+.layout-editing .dock-layer {
+  display: block !important;
+}
+
+.dock-zone {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  border: 2px dashed rgba(59, 130, 246, 0.45);
+  background: rgba(59, 130, 246, 0.08);
+  color: var(--blue);
+  border-radius: 18px;
+  font-weight: 900;
+  font-size: 12px;
+  opacity: 0;
+  transition: opacity 120ms ease, background 120ms ease;
+}
+
+.layout-dragging .dock-zone {
+  opacity: 1;
+}
+
+.dock-zone.hot {
+  background: rgba(59, 130, 246, 0.22);
+  border-color: rgba(59, 130, 246, 0.9);
+}
+
+.dock-left {
+  left: 8px;
+  top: 8px;
+  bottom: 8px;
+  width: 22%;
+}
+
+.dock-right {
+  right: 8px;
+  top: 8px;
+  bottom: 8px;
+  width: 22%;
+}
+
+.dock-bottom {
+  left: 24%;
+  right: 24%;
+  bottom: 8px;
+  height: 24%;
+}
+
+.dock-center {
+  left: 27%;
+  right: 27%;
+  top: 12%;
+  bottom: 30%;
+}
+
+.layout-toast {
+  font-family: var(--mono);
+}
+
+.layout-editing .video-stage {
+  min-height: 420px;
+}
+
+.layout-editing .video-stage video {
+  min-height: 420px;
+}
+
+@media (max-width: 1180px) {
+  .layout-editing [data-panel] {
+    position: relative !important;
+    left: auto !important;
+    top: auto !important;
+    width: auto !important;
+    height: auto !important;
+    resize: vertical;
+  }
+
+  .layout-editing .dock-layer {
+    display: none !important;
+  }
+}

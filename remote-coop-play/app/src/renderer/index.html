@@ -44,12 +44,21 @@
         <div class="topbar-actions">
           <span id="serverPingBadge" class="mini-badge">Server -- ms</span>
           <span id="peerPingBadge" class="mini-badge">Peer -- ms</span>
+          <button id="layoutEditToggle" class="secondary-btn">Edit layout</button>
+          <button id="layoutSave" class="secondary-btn hidden">Save layout</button>
+          <button id="layoutReset" class="secondary-btn hidden">Reset layout</button>
           <button id="themeToggle" class="secondary-btn">Dark mode</button>
         </div>
       </header>
 
-      <section class="workspace">
-        <section class="control-column">
+      <section id="workspace" class="workspace">
+        <div id="dockLayer" class="dock-layer hidden">
+          <div class="dock-zone dock-left" data-dock="left">Dock left</div>
+          <div class="dock-zone dock-right" data-dock="right">Dock right</div>
+          <div class="dock-zone dock-bottom" data-dock="bottom">Dock bottom</div>
+          <div class="dock-zone dock-center" data-dock="center">Dock center</div>
+        </div>
+        <section class="control-column" data-panel="controls" data-panel-title="Controls">
           <section id="homeScreen" class="screen">
             <div class="card hero-card">
               <span class="eyebrow">Start</span>
@@ -316,7 +325,7 @@
         </section>
 
         <section class="stream-column">
-          <section class="stage-card">
+          <section class="stage-card" data-panel="stream" data-panel-title="Stream">
             <div class="stage-top">
               <div>
                 <span class="eyebrow">Stream</span>
@@ -340,7 +349,7 @@
             </div>
           </section>
 
-          <section class="party-strip">
+          <section class="party-strip" data-panel="party" data-panel-title="Party">
             <div id="cameraPreview" class="camera-preview hidden">
               <video id="localCameraVideo" autoplay muted playsinline></video>
               <span>You</span>
@@ -348,7 +357,7 @@
             <div id="remoteCameraStrip" class="camera-strip"></div>
           </section>
 
-          <section id="debugPanel" class="debug-panel collapsed">
+          <section id="debugPanel" class="debug-panel collapsed" data-panel="debug" data-panel-title="Debug">
             <div class="debug-head">
               <div>
                 <span class="eyebrow">Debug</span>
